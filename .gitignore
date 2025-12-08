@@ -1,0 +1,10 @@
+*.wav
+__pycache__/
+bin/
+unity/
+CMakeCache.txt
+CMakeFiles/
+Makefile
+cmake_install.cmake
+.gdb_history
+pink.txt
