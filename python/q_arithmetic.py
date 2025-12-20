@@ -1,18 +1,13 @@
 import numpy as np
-import matplotlib.pyplot as plt
 from scipy import signal
-from scipy.io import wavfile
-from scipy import stats
-import random
 import dsp
-from tqdm import trange
 import noise
 from enum import Enum
 
 int_type = np.uint32
 max_exp = 32
 
-def convert_to_q(num, q, dbg_output = False) -> np.int32:
+def to_q32(num, q, dbg_output = False) -> np.int32:
     assert( q < max_exp )
     q_num = np.int32(num * np.float32( 1 << q ) )
     
@@ -21,7 +16,7 @@ def convert_to_q(num, q, dbg_output = False) -> np.int32:
     
     return q_num
 
-def q_to_float(num, q, dbg_output = False) -> np.float32:
+def to_float32(num, q, dbg_output = False) -> np.float32:
     assert( q < max_exp )
     result = np.float32( np.float32(np.int32(num)) / np.float32( 1 << q ) )
     
@@ -47,6 +42,13 @@ def q16bit_to_float(num, q, dbg_output = False) -> np.float32:
         print(f'Q{q} to float conversion {bin(num)} -> {result}')
     
     return result
+
+def mul32(a,b,q) -> np.int32:
+    assert( q < max_exp )
+
+    temp = ( np.int64(a) * np.int64(b) ) >> q
+
+    return np.int32( temp & 0xFFFFFFFF )
 
 def mul16(a,b,q) -> np.int16:
     assert( q < 16 )

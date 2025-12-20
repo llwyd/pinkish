@@ -2,42 +2,60 @@ import numpy as np
 import matplotlib.pyplot as plt
 from matplotlib.widgets import Slider, Button, RadioButtons
 from scipy import signal
+from scipy.io.wavfile import write
 import dsp
+import fp_dsp as fp
+import q_arithmetic as qmath
+from tqdm import tqdm
 
-def calculate_bands(bands, fs):
-    step = (np.log(fs/2) - np.log(20)) / (bands)
-    cutoff = np.zeros(bands)
-    cutoff[0] = np.exp(step)*20
-
-    for i in range(1,bands):
-        cutoff[i] = np.exp(step) * cutoff[i-1]
-    cutoff = np.pad(cutoff,(1,0),'constant',constant_values=0) 
-
-    return cutoff
-
-
-num_bands = 8
+num_bands = 4
 fs = 48000
-sig_len = fs 
+sig_len = 8192 
 order = 1
 axcolor = 'lightgoldenrodyellow'
 fig, ax = plt.subplots(figsize=(8,6))
 
 plt.subplots_adjust(bottom=0.35)
 plt.hlines(-3,0,fs/2)
-plt.xlim(20,fs/2)
+plt.xlim(10,fs/2)
 plt.ylim(-30,5)
 plt.xlabel('Frequency (Hz)')
 plt.ylabel('Magnitude (dB)')
 
+def generate(event):
+    print("Generating filtered noise...")
+    fp_bands = []
+    q = 30
+    print(f"Convert to Q{q} format...")
+
+    for i,eq in enumerate(eq_bands):
+        fp_bands.append(fp.QBand(eq.lower_cutoff,eq.upper_cutoff,fs,q, eq.gain))
+
+    out_len = fs * 5
+    #h = signal.unit_impulse(out_len)
+
+    h = (np.random.rand(out_len) - 0.5) * 2
+    h_q = qmath.to_q32(h, q)
+
+    y_out = np.zeros(out_len,dtype=np.int32)
+    for eq in tqdm(fp_bands):
+        h_q = qmath.to_q32(h, q)
+        ir = fp.sosfilt_rt(eq.sos_q, h_q, eq.gain_q,q)
+        y_out += ir
+    write('test.wav',fs,y_out)
+    print("Fin")
 
 ideal_db, ideal_f = dsp.generate_decade_line( 15, 100000 )
 ax.semilogx(ideal_f, ideal_db )
 
-freqs = calculate_bands(num_bands,fs)
+axbutton = fig.add_axes([0.75, 0.1, 0.1, 0.075])
+genbutton = Button(axbutton,'Generate')
+genbutton.on_clicked(generate)
+
+freqs = dsp.calculate_bands(num_bands,fs)
 eq_bands = []
 for i in range(0,num_bands):
-    eq_bands.append(dsp.EQButterBand(freqs[i],freqs[i+1],fs,order))
+    eq_bands.append(dsp.EQButterBand(freqs[i],freqs[i+1],fs,order, 0.0))
 
 h = signal.unit_impulse(sig_len)
 H, Hf, Hdb = dsp.fft(h, fs, sig_len)    
@@ -60,10 +78,8 @@ def update():
     
     for i in range(0, num_bands):
         h = signal.unit_impulse(sig_len)
-        gain = np.power(10, eq_bands[i].gain / 20)
-        #w = signal.sosfilt(eq_bands[i].filter, h) * gain
-        lpf = signal.sosfilt(eq_bands[i].lpf, h) 
-        w = signal.sosfilt(eq_bands[i].hpf, lpf)
+        gain = eq_bands[i].gain_raw()
+        w = signal.sosfilt(eq_bands[i].sos, h)
         w *= gain
         z += w
 
@@ -79,8 +95,8 @@ def update_graph(val):
     ly.set_ydata(Ydb)
 
 for i in range(0, num_bands):
-    lpf = signal.sosfilt(eq_bands[i].lpf,h)
-    m = signal.sosfilt(eq_bands[i].hpf,lpf)
+    h = signal.unit_impulse(sig_len)
+    m = signal.sosfilt(eq_bands[i].sos,h)
     y += m
     M, Mf,Mdb = dsp.fft(m, fs, sig_len)    
     f.append(m)
@@ -91,7 +107,7 @@ for i in range(0, num_bands):
     ax.semilogx(Mf,Mdb)
     init_gain = eq_bands[i].gain
     axfreq.append(plt.axes([x_pos, y_pos, 0.03, 0.25], facecolor=axcolor))
-    slider.append(Slider(axfreq[i], 'Band', -100, 10, valinit=init_gain, valstep=0.1, orientation='vertical'))
+    slider.append(Slider(axfreq[i], f'{i}', -100, 10, valinit=init_gain, valstep=0.1, orientation='vertical'))
     slider[i].on_changed(update_graph)
     x_pos += x_inc
     y_pos += y_inc
