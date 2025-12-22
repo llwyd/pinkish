@@ -9,17 +9,11 @@ use cpal::
     SizedSample,
 };
 
-fn write_samples(data: &mut [f32], _:&cpal::OutputCallbackInfo)
-{
-    for sample in data.iter_mut()
-    {
-        *sample = 0.0;
-    }
-}
+mod noise;
+mod voss;
 
-fn audio_loop(device: &cpal::Device, config: &cpal::StreamConfig)
-{
-}
+use crate::noise::Noise;
+use crate::voss::Pink;
 
 fn main() {
     println!("Hello, world!");
@@ -33,15 +27,23 @@ fn main() {
 
     assert!(config.sample_format() == cpal::SampleFormat::F32);
     assert!(config.sample_rate() == 44100);
+    let mut p = Pink::new();
 
-    //audio_loop(&device, &config.into());
-
-    let err_fn = |err| eprintln!("Error {}", err);
-
-    let stream = device.build_output_stream(&config.into(),write_samples,err_fn, None).unwrap();
+    let stream = device.build_output_stream(&config.into(),
+    move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
+    {
+        for sample in data.iter_mut()
+        {
+            *sample = p.update();
+        }
+    },
+    move |err|
+    {
+    }, 
+    None).unwrap();
 
 
     stream.play().unwrap();
 
-    std::thread::sleep(std::time::Duration::from_millis(1000));
+    std::thread::sleep(std::time::Duration::from_millis(4000));
 }
