@@ -9,11 +9,15 @@ use cpal::
     SizedSample,
 };
 
+use eframe::egui;
+
 mod noise;
 mod voss;
+mod resonator;
 
 use crate::noise::Noise;
 use crate::voss::Pink;
+use crate::resonator::Resonator;
 
 fn main() {
     println!("Hello, world!");
