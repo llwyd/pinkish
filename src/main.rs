@@ -52,5 +52,5 @@ fn main() {
 
     stream.play().unwrap();
 
-    std::thread::sleep(std::time::Duration::from_millis(4000));
+    loop {}
 }
