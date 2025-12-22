@@ -8,3 +8,8 @@ Makefile
 cmake_install.cmake
 .gdb_history
 pink.txt
+
+
+# Added by cargo
+
+/target
