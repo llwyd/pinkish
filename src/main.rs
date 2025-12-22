@@ -27,14 +27,21 @@ fn main() {
 
     assert!(config.sample_format() == cpal::SampleFormat::F32);
     assert!(config.sample_rate() == 44100);
+
+    let num_channels = config.channels() as usize;
+    println!("Channels: {}", num_channels);
     let mut p = Pink::new();
 
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
-        for sample in data.iter_mut()
+        for frame in data.chunks_mut(num_channels)
         {
-            *sample = p.update();
+            let next = p.update();
+            for sample in frame.iter_mut()
+            {
+                *sample = next;
+            }
         }
     },
     move |err|
