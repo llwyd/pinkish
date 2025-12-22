@@ -31,16 +31,16 @@ fn main() {
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
     let mut p = Pink::new();
-
+    let mut stereo = [Pink::new(),Pink::new()];
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
         for frame in data.chunks_mut(num_channels)
         {
             let next = p.update();
-            for sample in frame.iter_mut()
+            for (idx,sample) in frame.iter_mut().enumerate()
             {
-                *sample = next;
+                *sample = stereo[idx].update();
             }
         }
     },
