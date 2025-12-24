@@ -14,7 +14,9 @@ use egui::{Key,ScrollArea};
 mod noise;
 mod voss;
 mod resonator;
+mod gain;
 
+use crate::gain::Gain;
 use crate::noise::Noise;
 use crate::voss::Pink;
 use crate::resonator::Resonator;
@@ -39,17 +41,19 @@ fn main() -> eframe::Result{
 
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
-    let mut p = Pink::new();
     let mut stereo = [Pink::new(),Pink::new()];
+    let mut gain = 1.0;
+    let mut g = Gain::new();
+
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
+        //println!("{gain}");
         for frame in data.chunks_mut(num_channels)
         {
-            let next = p.update();
             for (idx,sample) in frame.iter_mut().enumerate()
             {
-                *sample = stereo[idx].update();
+                *sample = stereo[idx].update() * g.value();
             }
         }
     },
@@ -66,22 +70,30 @@ fn main() -> eframe::Result{
         options,
         Box::new(
             |cc|{
-                Ok(Box::new(PinkishApp::new(cc)))
+                Ok(Box::new(PinkishApp::new(cc, &mut g)))
             }))
 }
 
-struct PinkishApp {}
+struct PinkishApp<'a> {
+    gain: &'a mut Gain,
+}
 
-impl PinkishApp{
-    fn new(cc: &eframe::CreationContext<'_>) -> Self{
-        Self{}
+impl <'a>PinkishApp<'a>{
+    fn new(_cc: &eframe::CreationContext<'_>, gain: &'a mut Gain) -> Self{
+        Self{
+            gain: gain,
+        }
     }
 }
 
-impl eframe::App for PinkishApp{
+impl eframe::App for PinkishApp<'_>{
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame){
         egui::CentralPanel::default().show(ctx, |ui|{
             ui.heading("Hello Pinkish");
+            if ui.button("Stop").clicked(){
+                self.gain.silence();
+                println!("button pressed {}", self.gain.value());
+            }       
         });
     }
 }
