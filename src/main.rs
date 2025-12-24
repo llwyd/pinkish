@@ -8,7 +8,8 @@ use cpal::
     Sample,
     SizedSample,
 };
-
+use std::rc::Rc;
+use std::sync::{Arc, Mutex};
 use eframe::egui;
 use egui::{Key,ScrollArea};
 mod noise;
@@ -19,7 +20,7 @@ mod gain;
 use crate::gain::Gain;
 use crate::noise::Noise;
 use crate::voss::Pink;
-use crate::resonator::Resonator;
+//use crate::resonator::Resonator;
 
 fn main() -> eframe::Result{
 
@@ -28,7 +29,7 @@ fn main() -> eframe::Result{
         viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
         ..Default::default()
     };
-
+    let g = Arc::new(Mutex::new(Gain::new()));
     let host = cpal::default_host();
 
     let device = host.default_output_device().expect("Host Device error");
@@ -42,9 +43,8 @@ fn main() -> eframe::Result{
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
     let mut stereo = [Pink::new(),Pink::new()];
-    let mut gain = 1.0;
-    let mut g = Gain::new();
 
+    let value = g.clone();
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
@@ -53,7 +53,7 @@ fn main() -> eframe::Result{
         {
             for (idx,sample) in frame.iter_mut().enumerate()
             {
-                *sample = stereo[idx].update() * g.value();
+                *sample = stereo[idx].update() * value.lock().unwrap().value();
             }
         }
     },
@@ -70,32 +70,30 @@ fn main() -> eframe::Result{
         options,
         Box::new(
             |cc|{
-                Ok(Box::new(PinkishApp::new(cc, &mut g)))
+                Ok(Box::new(PinkishApp::new(cc, g.clone())))
             }))
 }
 
-struct PinkishApp<'a> {
-    gain: &'a mut Gain,
+struct PinkishApp {
+    gain:Arc<Mutex<Gain>>,
 }
 
-impl <'a>PinkishApp<'a>{
-    fn new(_cc: &eframe::CreationContext<'_>, gain: &'a mut Gain) -> Self{
+impl PinkishApp{
+    fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<Mutex<Gain>>) -> Self{
         Self{
-            gain: gain,
+            gain: gain.clone(),
         }
     }
 }
 
-impl eframe::App for PinkishApp<'_>{
+impl eframe::App for PinkishApp{
     fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame){
         egui::CentralPanel::default().show(ctx, |ui|{
             ui.heading("Hello Pinkish");
             if ui.button("Stop").clicked(){
-                self.gain.silence();
-                println!("button pressed {}", self.gain.value());
+                self.gain.lock().unwrap().silence();
             }       
         });
     }
 }
-
 
