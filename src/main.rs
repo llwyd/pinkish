@@ -10,7 +10,7 @@ use cpal::
 };
 
 use eframe::egui;
-
+use egui::{Key,ScrollArea};
 mod noise;
 mod voss;
 mod resonator;
@@ -19,8 +19,13 @@ use crate::noise::Noise;
 use crate::voss::Pink;
 use crate::resonator::Resonator;
 
-fn main() {
-    println!("Hello, world!");
+fn main() -> eframe::Result{
+
+    let options = eframe::NativeOptions
+    {
+        viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
+        ..Default::default()
+    };
 
     let host = cpal::default_host();
 
@@ -30,7 +35,7 @@ fn main() {
     println!("Default Config: {config:?}");
 
     assert!(config.sample_format() == cpal::SampleFormat::F32);
-    assert!(config.sample_rate() == 44100);
+    //assert!(config.sample_rate() == 44100);
 
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
@@ -56,5 +61,29 @@ fn main() {
 
     stream.play().unwrap();
 
-    loop {}
+    eframe::run_native(
+        "Pinkish",
+        options,
+        Box::new(
+            |cc|{
+                Ok(Box::new(PinkishApp::new(cc)))
+            }))
 }
+
+struct PinkishApp {}
+
+impl PinkishApp{
+    fn new(cc: &eframe::CreationContext<'_>) -> Self{
+        Self{}
+    }
+}
+
+impl eframe::App for PinkishApp{
+    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame){
+        egui::CentralPanel::default().show(ctx, |ui|{
+            ui.heading("Hello Pinkish");
+        });
+    }
+}
+
+
