@@ -74,14 +74,12 @@ fn main() -> eframe::Result{
 
 struct PinkishApp {
     gain:Arc<RwLock<Gain>>,
-    slider_gain:f32,
 }
 
 impl PinkishApp{
     fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<RwLock<Gain>>) -> Self{
         Self{
             gain: gain.clone(),
-            slider_gain: 0.0,
         }
     }
 }
