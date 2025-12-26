@@ -2,6 +2,7 @@ pub use crate::noise::Noise;
     
 const GENERATORS: usize = 15;
 
+#[allow(dead_code)]
 pub struct Pink{
     noise: [Noise; GENERATORS], // updated based on trailing zeros
     white: Noise, // Updated every iteration
@@ -13,6 +14,7 @@ pub struct Pink{
     rollover: u32,
 }
 
+#[allow(dead_code)]
 impl Pink{
     const GENERATORS: u32 = GENERATORS as u32;
     

@@ -16,10 +16,11 @@ use egui::{Align,Layout,Slider,SliderOrientation};
 mod noise;
 mod voss;
 mod gain;
+mod biquad;
 
 use crate::gain::Gain;
 use crate::noise::Noise;
-use crate::voss::Pink;
+use crate::biquad::Biquad;
 
 fn main() -> eframe::Result{
 
@@ -29,6 +30,7 @@ fn main() -> eframe::Result{
         ..Default::default()
     };
     let g = Arc::new(RwLock::new(Gain::new()));
+    
     let host = cpal::default_host();
 
     let device = host.default_output_device().expect("Host Device error");
@@ -42,17 +44,24 @@ fn main() -> eframe::Result{
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
     let mut stereo = [Noise::new(),Noise::new()];
-
+    let mut filter = [
+        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],1.0),
+        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],1.0)
+    ];
     let value = g.clone();
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
-        let gain = value.write().unwrap().value();
+        let master_gain = value.write().unwrap().value();
+        
         for frame in data.chunks_mut(num_channels)
         {
             for (idx,sample) in frame.iter_mut().enumerate()
             {
-                *sample = stereo[idx].update() * gain;
+                let noise = stereo[idx].update();
+                let next = filter[idx].next(noise);
+                
+                *sample = next * master_gain;
             }
         }
     },
