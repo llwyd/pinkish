@@ -18,6 +18,7 @@ mod voss;
 mod gain;
 
 use crate::gain::Gain;
+use crate::noise::Noise;
 use crate::voss::Pink;
 
 fn main() -> eframe::Result{
@@ -40,7 +41,7 @@ fn main() -> eframe::Result{
 
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
-    let mut stereo = [Pink::new(),Pink::new()];
+    let mut stereo = [Noise::new(),Noise::new()];
 
     let value = g.clone();
     let stream = device.build_output_stream(&config.into(),

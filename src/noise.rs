@@ -11,8 +11,9 @@ impl Noise{
             value: 0.0,
         }
     }
-    pub fn update(&mut self){
+    pub fn update(&mut self) -> f32{
         self.value = (random::<f32>() * 2.0) - 1.0;
+        self.value
     }
     
     pub fn value(&self) -> f32{
