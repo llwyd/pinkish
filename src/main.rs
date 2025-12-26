@@ -12,7 +12,7 @@ use cpal::
 */
 use std::sync::{Arc, RwLock};
 use eframe::egui;
-//use egui::{Key,ScrollArea};
+use egui::{Slider,SliderOrientation};
 mod noise;
 mod voss;
 mod gain;
@@ -46,12 +46,12 @@ fn main() -> eframe::Result{
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
-        //println!("{gain}");
+        let gain = value.write().unwrap().value();
         for frame in data.chunks_mut(num_channels)
         {
             for (idx,sample) in frame.iter_mut().enumerate()
             {
-                *sample = stereo[idx].update() * value.write().unwrap().value();
+                *sample = stereo[idx].update() * gain;
             }
         }
     },
@@ -74,12 +74,14 @@ fn main() -> eframe::Result{
 
 struct PinkishApp {
     gain:Arc<RwLock<Gain>>,
+    slider_gain:f32,
 }
 
 impl PinkishApp{
     fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<RwLock<Gain>>) -> Self{
         Self{
             gain: gain.clone(),
+            slider_gain: 0.0,
         }
     }
 }
@@ -90,7 +92,20 @@ impl eframe::App for PinkishApp{
             ui.heading("Hello Pinkish");
             if ui.button("Stop").clicked(){
                 self.gain.write().unwrap().silence();
-            }       
+            }
+            ui.add(
+                Slider::new(&mut *self.gain.write().unwrap().ptr(), 0.0..=1.0)
+                .text("Master Gain")
+                .orientation(SliderOrientation::Vertical)
+                .step_by(0.1)
+                );
+            /*
+            ui.add(
+                Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                .orientation(SliderOrientation::Vertical)
+                .step_by(0.1)
+                );
+            */
         });
     }
 }
