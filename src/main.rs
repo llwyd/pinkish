@@ -12,7 +12,7 @@ use cpal::
 */
 use std::sync::{Arc, RwLock};
 use eframe::egui;
-use egui::{Slider,SliderOrientation};
+use egui::{Align,Layout,Slider,SliderOrientation};
 mod noise;
 mod voss;
 mod gain;
@@ -74,12 +74,14 @@ fn main() -> eframe::Result{
 
 struct PinkishApp {
     gain:Arc<RwLock<Gain>>,
+    slider_gain: f32,
 }
 
 impl PinkishApp{
     fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<RwLock<Gain>>) -> Self{
         Self{
             gain: gain.clone(),
+            slider_gain: 0.0,
         }
     }
 }
@@ -87,23 +89,51 @@ impl PinkishApp{
 impl eframe::App for PinkishApp{
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
         egui::CentralPanel::default().show(ctx, |ui|{
-            ui.heading("Hello Pinkish");
-            if ui.button("Stop").clicked(){
-                self.gain.write().unwrap().silence();
-            }
-            ui.add(
-                Slider::new(&mut *self.gain.write().unwrap().ptr(), 0.0..=1.0)
-                .text("Master Gain")
-                .orientation(SliderOrientation::Vertical)
-                .step_by(0.1)
-                );
-            /*
-            ui.add(
-                Slider::new(&mut self.slider_gain, -100.0..=0.0)
-                .orientation(SliderOrientation::Vertical)
-                .step_by(0.1)
-                );
-            */
+            ui.heading("Pink-ish");
+            ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
+            {
+                if ui.button("Stop").clicked(){
+                    self.gain.write().unwrap().silence();
+                }
+                if ui.button("Start").clicked(){
+                    self.gain.write().unwrap().resume();
+                }
+                if ui.button("Pink").clicked(){
+                    self.gain.write().unwrap().silence();
+                }
+                if ui.button("White").clicked(){
+                    self.gain.write().unwrap().silence();
+                }
+            });
+            ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
+            {
+                ui.add(
+                    Slider::new(&mut *self.gain.write().unwrap().ptr(), 0.0..=1.0)
+                    .text("Master Gain")
+                    .orientation(SliderOrientation::Vertical)
+                    .step_by(0.1)
+                    );
+                ui.add(
+                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    .orientation(SliderOrientation::Vertical)
+                    .step_by(0.1)
+                    );
+                ui.add(
+                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    .orientation(SliderOrientation::Vertical)
+                    .step_by(0.1)
+                    );
+                ui.add(
+                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    .orientation(SliderOrientation::Vertical)
+                    .step_by(0.1)
+                    );
+                ui.add(
+                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    .orientation(SliderOrientation::Vertical)
+                    .step_by(0.1)
+                    );
+            });
         });
     }
 }
