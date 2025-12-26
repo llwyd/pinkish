@@ -84,6 +84,7 @@ fn main() -> eframe::Result{
 
 struct PinkishApp {
     gain:Arc<RwLock<Gain>>,
+    log_gain:f32,
     slider_gain: f32,
 }
 
@@ -91,6 +92,7 @@ impl PinkishApp{
     fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<RwLock<Gain>>) -> Self{
         Self{
             gain: gain.clone(),
+            log_gain: 1.0,
             slider_gain: 0.0,
         }
     }
@@ -124,9 +126,10 @@ impl eframe::App for PinkishApp{
                     .step_by(0.1)
                     );
                 ui.add(
-                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    Slider::new(&mut self.log_gain, 0.00000001..=1.0)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.1)
+                    //.step_by(0.1)
+                    .logarithmic(true)
                     );
                 ui.add(
                     Slider::new(&mut self.slider_gain, -100.0..=0.0)

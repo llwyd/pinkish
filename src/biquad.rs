@@ -1,8 +1,9 @@
-#[derive(Copy, Clone)]
+use std::sync::{Arc, RwLock};
+
 pub struct Biquad{
     a:[f32;3],
     b:[f32;2],
-    g:f32,
+    g:Arc<RwLock<f32>>,
     s:[f32;2],
 }
 
@@ -21,7 +22,7 @@ impl Biquad{
         {
             a: a,
             b: b,
-            g: g,
+            g: Arc::new(RwLock::new(g)),
             s: [0.0, 0.0],
         }
     }
@@ -31,6 +32,6 @@ impl Biquad{
         let y = x * self.a[0] + self.s[0];
         self.s[0] = self.s[1] + (x * self.a[1]) - (self.b[0] * y);
         self.s[1] = (x * self.a[2]) - (y * self.b[1]);
-        y * self.g
+        y * *self.g.read().unwrap()
     }
 }
