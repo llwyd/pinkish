@@ -1,3 +1,5 @@
+
+#[allow(dead_code)]
 pub struct Resonator
 {
     a1: f32,
@@ -5,6 +7,7 @@ pub struct Resonator
     y:[f32;2],
 }
 
+#[allow(dead_code)]
 impl Resonator{
 
     pub fn new() -> Resonator{

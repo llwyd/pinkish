@@ -3,33 +3,31 @@ use cpal::traits::{
     HostTrait,
     StreamTrait,
 };
+/*
 use cpal::
 {
     Sample,
     SizedSample,
 };
-use std::rc::Rc;
-use std::sync::{Arc, Mutex};
+*/
+use std::sync::{Arc, RwLock};
 use eframe::egui;
-use egui::{Key,ScrollArea};
+//use egui::{Key,ScrollArea};
 mod noise;
 mod voss;
-mod resonator;
 mod gain;
 
 use crate::gain::Gain;
-use crate::noise::Noise;
 use crate::voss::Pink;
-//use crate::resonator::Resonator;
 
 fn main() -> eframe::Result{
 
     let options = eframe::NativeOptions
     {
-        viewport: egui::ViewportBuilder::default().with_inner_size([800.0, 600.0]),
+        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
         ..Default::default()
     };
-    let g = Arc::new(Mutex::new(Gain::new()));
+    let g = Arc::new(RwLock::new(Gain::new()));
     let host = cpal::default_host();
 
     let device = host.default_output_device().expect("Host Device error");
@@ -53,11 +51,11 @@ fn main() -> eframe::Result{
         {
             for (idx,sample) in frame.iter_mut().enumerate()
             {
-                *sample = stereo[idx].update() * value.lock().unwrap().value();
+                *sample = stereo[idx].update() * value.write().unwrap().value();
             }
         }
     },
-    move |err|
+    move |_err|
     {
     }, 
     None).unwrap();
@@ -75,11 +73,11 @@ fn main() -> eframe::Result{
 }
 
 struct PinkishApp {
-    gain:Arc<Mutex<Gain>>,
+    gain:Arc<RwLock<Gain>>,
 }
 
 impl PinkishApp{
-    fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<Mutex<Gain>>) -> Self{
+    fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<RwLock<Gain>>) -> Self{
         Self{
             gain: gain.clone(),
         }
@@ -87,11 +85,11 @@ impl PinkishApp{
 }
 
 impl eframe::App for PinkishApp{
-    fn update(&mut self, ctx: &egui::Context, frame: &mut eframe::Frame){
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
         egui::CentralPanel::default().show(ctx, |ui|{
             ui.heading("Hello Pinkish");
             if ui.button("Stop").clicked(){
-                self.gain.lock().unwrap().silence();
+                self.gain.write().unwrap().silence();
             }       
         });
     }
