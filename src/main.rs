@@ -52,7 +52,14 @@ fn main() -> eframe::Result{
         Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])
     ];
 
-    let noise = Noise::new();
+    let mut noise = Noise::new();
+    
+    let mut eq = [
+        FilterBank::new(
+            vec![Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])],
+            biquad_gain.clone())
+    ];
+
     let value = g.clone();
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
@@ -61,10 +68,14 @@ fn main() -> eframe::Result{
         
         for frame in data.chunks_mut(num_channels)
         {
+            let n = noise.update();
+            let mut next = 0.0;
+            
+            for e in &mut eq{
+                next += e.next(n);
+            }
             for (idx,sample) in frame.iter_mut().enumerate()
             {
-                let noise = stereo[idx].update();
-                let next = filter[idx].next(noise);
                 
                 *sample = next * master_gain;
             }

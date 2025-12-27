@@ -8,10 +8,10 @@ pub struct FilterBank{
 }
 
 impl FilterBank{
-    pub fn new(filters: &Vec<Biquad>,
+    pub fn new(filters: Vec<Biquad>,
             gain:Arc<RwLock<f32>>) -> FilterBank{
         FilterBank{
-            biquad: filters.to_vec(),
+            biquad: filters.clone(),
             g: gain.clone(),
         }
     }
