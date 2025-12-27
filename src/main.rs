@@ -45,19 +45,30 @@ fn main() -> eframe::Result{
 
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
-    let mut stereo = [Noise::new(),Noise::new()];
-    let biquad_gain = Arc::new(RwLock::new(1.0));
-    let mut filter = [
-        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0]),
-        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])
-    ];
+    let bq_gain0 = Arc::new(RwLock::new(1.0));
+    let bq_gain1 = Arc::new(RwLock::new(0.75));
+    let bq_gain2 = Arc::new(RwLock::new(0.75));
+    let bq_gain3 = Arc::new(RwLock::new(1.0));
 
     let mut noise = Noise::new();
     
     let mut eq = [
         FilterBank::new(
             vec![Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])],
-            biquad_gain.clone())
+            bq_gain0.clone()),
+        FilterBank::new(
+            vec![Biquad::new([0.04340647, 0.04340647, 0.0],[-0.91318705,0.0]),
+                Biquad::new([0.99235444, -0.99235444, 0.0],[-0.98470888,0.0])
+            ],
+            bq_gain1.clone()),
+        FilterBank::new(
+            vec![Biquad::new([0.21470554, 0.21470554, 0.0],[-0.57058892,0.0]),
+                Biquad::new([0.95659353, -0.95659353, 0.0],[-0.91318705,0.0])
+            ],
+            bq_gain2.clone()),
+        FilterBank::new(
+            vec![Biquad::new([0.78529446, -0.78529446, 0.0],[-0.57058892,0.0])],
+            bq_gain3.clone()),
     ];
 
     let value = g.clone();
@@ -96,13 +107,20 @@ fn main() -> eframe::Result{
             |cc|{
                 Ok(Box::new(PinkishApp::new(cc, 
                             g.clone(),
-                            biquad_gain.clone())))
+                            bq_gain0.clone(),
+                            bq_gain1.clone(),
+                            bq_gain2.clone(),
+                            bq_gain3.clone()
+                            )))
             }))
 }
 
 struct PinkishApp {
     gain:Arc<RwLock<Gain>>,
-    biquad_gain:Arc<RwLock<f32>>,
+    bq_gain0:Arc<RwLock<f32>>,
+    bq_gain1:Arc<RwLock<f32>>,
+    bq_gain2:Arc<RwLock<f32>>,
+    bq_gain3:Arc<RwLock<f32>>,
     log_gain:f32,
     slider_gain: f32,
 }
@@ -110,10 +128,17 @@ struct PinkishApp {
 impl PinkishApp{
     fn new(_cc: &eframe::CreationContext<'_>,
         gain: Arc<RwLock<Gain>>,
-        biquad_gain: Arc<RwLock<f32>>) -> Self{
+        bq_gain0: Arc<RwLock<f32>>,
+        bq_gain1: Arc<RwLock<f32>>,
+        bq_gain2: Arc<RwLock<f32>>,
+        bq_gain3: Arc<RwLock<f32>>
+        ) -> Self{
         Self{
             gain: gain.clone(),
-            biquad_gain: biquad_gain.clone(),
+            bq_gain0: bq_gain0.clone(),
+            bq_gain1: bq_gain1.clone(),
+            bq_gain2: bq_gain2.clone(),
+            bq_gain3: bq_gain3.clone(),
             log_gain: 1.0,
             slider_gain: 0.0,
         }
@@ -148,25 +173,28 @@ impl eframe::App for PinkishApp{
                     .step_by(0.1)
                     );
                 ui.add(
-                    Slider::new(&mut *self.biquad_gain.write().unwrap(), 0.00001..=1.0)
+                    Slider::new(&mut *self.bq_gain0.write().unwrap(), 0.00001..=1.0)
                     .orientation(SliderOrientation::Vertical)
                     .step_by(0.001)
                     .logarithmic(true)
                     );
                 ui.add(
-                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    Slider::new(&mut *self.bq_gain1.write().unwrap(), 0.00001..=1.0)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.1)
+                    .step_by(0.001)
+                    .logarithmic(true)
                     );
                 ui.add(
-                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    Slider::new(&mut *self.bq_gain2.write().unwrap(), 0.00001..=1.0)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.1)
+                    .step_by(0.001)
+                    .logarithmic(true)
                     );
                 ui.add(
-                    Slider::new(&mut self.slider_gain, -100.0..=0.0)
+                    Slider::new(&mut *self.bq_gain3.write().unwrap(), 0.00001..=1.0)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.1)
+                    .step_by(0.001)
+                    .logarithmic(true)
                     );
             });
         });
