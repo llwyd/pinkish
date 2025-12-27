@@ -158,10 +158,16 @@ impl eframe::App for PinkishApp{
                     self.gain.write().unwrap().resume();
                 }
                 if ui.button("Pink").clicked(){
-                    self.gain.write().unwrap().silence();
+                    *self.bq_gain0.write().unwrap() = 0.8222;
+                    *self.bq_gain1.write().unwrap() = 0.2113;
+                    *self.bq_gain2.write().unwrap() = 0.0989;
+                    *self.bq_gain3.write().unwrap() = 0.0507;
                 }
                 if ui.button("White").clicked(){
-                    self.gain.write().unwrap().silence();
+                    *self.bq_gain0.write().unwrap() = 1.0;
+                    *self.bq_gain1.write().unwrap() = 0.75;
+                    *self.bq_gain2.write().unwrap() = 0.75;
+                    *self.bq_gain3.write().unwrap() = 1.0;
                 }
             });
             ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
