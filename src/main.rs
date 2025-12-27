@@ -51,7 +51,7 @@ fn main() -> eframe::Result{
     let bq_gain3 = Arc::new(RwLock::new(1.0));
 
     let mut noise = Noise::new();
-    
+    let mut stereo_noise = [Noise::new(),Noise::new()]; 
     let mut eq = [
         FilterBank::new(
             vec![Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])],
@@ -70,7 +70,44 @@ fn main() -> eframe::Result{
             vec![Biquad::new([0.78529446, -0.78529446, 0.0],[-0.57058892,0.0])],
             bq_gain3.clone()),
     ];
-
+    let mut stereo_eq =
+        [[
+            FilterBank::new(
+                vec![Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])],
+                bq_gain0.clone()),
+            FilterBank::new(
+                vec![Biquad::new([0.04340647, 0.04340647, 0.0],[-0.91318705,0.0]),
+                    Biquad::new([0.99235444, -0.99235444, 0.0],[-0.98470888,0.0])
+                ],
+                bq_gain1.clone()),
+            FilterBank::new(
+                vec![Biquad::new([0.21470554, 0.21470554, 0.0],[-0.57058892,0.0]),
+                    Biquad::new([0.95659353, -0.95659353, 0.0],[-0.91318705,0.0])
+                ],
+                bq_gain2.clone()),
+            FilterBank::new(
+                vec![Biquad::new([0.78529446, -0.78529446, 0.0],[-0.57058892,0.0])],
+                bq_gain3.clone()),
+        ],
+        [
+            FilterBank::new(
+                vec![Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])],
+                bq_gain0.clone()),
+            FilterBank::new(
+                vec![Biquad::new([0.04340647, 0.04340647, 0.0],[-0.91318705,0.0]),
+                    Biquad::new([0.99235444, -0.99235444, 0.0],[-0.98470888,0.0])
+                ],
+                bq_gain1.clone()),
+            FilterBank::new(
+                vec![Biquad::new([0.21470554, 0.21470554, 0.0],[-0.57058892,0.0]),
+                    Biquad::new([0.95659353, -0.95659353, 0.0],[-0.91318705,0.0])
+                ],
+                bq_gain2.clone()),
+            FilterBank::new(
+                vec![Biquad::new([0.78529446, -0.78529446, 0.0],[-0.57058892,0.0])],
+                bq_gain3.clone()),
+        ]];
+        
     let value = g.clone();
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
@@ -79,14 +116,14 @@ fn main() -> eframe::Result{
         
         for frame in data.chunks_mut(num_channels)
         {
-            let n = noise.update();
-            let mut next = 0.0;
-            
-            for e in &mut eq{
-                next += e.next(n);
-            }
             for (idx,sample) in frame.iter_mut().enumerate()
             {
+                let n = stereo_noise[idx].update();
+                let mut next = 0.0;
+                
+                for e in &mut stereo_eq[idx]{
+                    next += e.next(n);
+                }
                 
                 *sample = next * master_gain;
             }
