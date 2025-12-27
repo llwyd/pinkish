@@ -18,7 +18,7 @@ impl FilterBank{
     pub fn next(&mut self, x:f32) -> f32
     {
         let mut y = x;
-        for mut filter in &mut self.biquad
+        for filter in &mut self.biquad
         {
             y = filter.next(y);
         }

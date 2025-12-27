@@ -50,26 +50,7 @@ fn main() -> eframe::Result{
     let bq_gain2 = Arc::new(RwLock::new(0.75));
     let bq_gain3 = Arc::new(RwLock::new(1.0));
 
-    let mut noise = Noise::new();
     let mut stereo_noise = [Noise::new(),Noise::new()]; 
-    let mut eq = [
-        FilterBank::new(
-            vec![Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])],
-            bq_gain0.clone()),
-        FilterBank::new(
-            vec![Biquad::new([0.04340647, 0.04340647, 0.0],[-0.91318705,0.0]),
-                Biquad::new([0.99235444, -0.99235444, 0.0],[-0.98470888,0.0])
-            ],
-            bq_gain1.clone()),
-        FilterBank::new(
-            vec![Biquad::new([0.21470554, 0.21470554, 0.0],[-0.57058892,0.0]),
-                Biquad::new([0.95659353, -0.95659353, 0.0],[-0.91318705,0.0])
-            ],
-            bq_gain2.clone()),
-        FilterBank::new(
-            vec![Biquad::new([0.78529446, -0.78529446, 0.0],[-0.57058892,0.0])],
-            bq_gain3.clone()),
-    ];
     let mut stereo_eq =
         [[
             FilterBank::new(
@@ -158,8 +139,6 @@ struct PinkishApp {
     bq_gain1:Arc<RwLock<f32>>,
     bq_gain2:Arc<RwLock<f32>>,
     bq_gain3:Arc<RwLock<f32>>,
-    log_gain:f32,
-    slider_gain: f32,
 }
 
 impl PinkishApp{
@@ -176,8 +155,6 @@ impl PinkishApp{
             bq_gain1: bq_gain1.clone(),
             bq_gain2: bq_gain2.clone(),
             bq_gain3: bq_gain3.clone(),
-            log_gain: 1.0,
-            slider_gain: 0.0,
         }
     }
 }
