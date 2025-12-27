@@ -44,9 +44,10 @@ fn main() -> eframe::Result{
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
     let mut stereo = [Noise::new(),Noise::new()];
+    let biquad_gain = Arc::new(RwLock::new(1.0));
     let mut filter = [
-        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],1.0),
-        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],1.0)
+        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],biquad_gain.clone()),
+        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],biquad_gain.clone())
     ];
     let value = g.clone();
     let stream = device.build_output_stream(&config.into(),
@@ -78,20 +79,26 @@ fn main() -> eframe::Result{
         options,
         Box::new(
             |cc|{
-                Ok(Box::new(PinkishApp::new(cc, g.clone())))
+                Ok(Box::new(PinkishApp::new(cc, 
+                            g.clone(),
+                            biquad_gain.clone())))
             }))
 }
 
 struct PinkishApp {
     gain:Arc<RwLock<Gain>>,
+    biquad_gain:Arc<RwLock<f32>>,
     log_gain:f32,
     slider_gain: f32,
 }
 
 impl PinkishApp{
-    fn new(_cc: &eframe::CreationContext<'_>, gain: Arc<RwLock<Gain>>) -> Self{
+    fn new(_cc: &eframe::CreationContext<'_>,
+        gain: Arc<RwLock<Gain>>,
+        biquad_gain: Arc<RwLock<f32>>) -> Self{
         Self{
             gain: gain.clone(),
+            biquad_gain: biquad_gain.clone(),
             log_gain: 1.0,
             slider_gain: 0.0,
         }
@@ -126,9 +133,9 @@ impl eframe::App for PinkishApp{
                     .step_by(0.1)
                     );
                 ui.add(
-                    Slider::new(&mut self.log_gain, 0.00000001..=1.0)
+                    Slider::new(&mut *self.biquad_gain.write().unwrap(), 0.00001..=1.0)
                     .orientation(SliderOrientation::Vertical)
-                    //.step_by(0.1)
+                    .step_by(0.001)
                     .logarithmic(true)
                     );
                 ui.add(

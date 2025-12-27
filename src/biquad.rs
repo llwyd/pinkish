@@ -10,19 +10,13 @@ pub struct Biquad{
 impl Biquad{
     pub fn new(a:[f32;3],
         b:[f32;2],
-        gain:f32) -> Biquad{
-        let mut g = gain;
-        
-        if g > 1.0
-        {
-            g = 1.0;
-        }
+        gain:Arc<RwLock<f32>>) -> Biquad{
         
         Biquad
         {
             a: a,
             b: b,
-            g: Arc::new(RwLock::new(g)),
+            g: gain.clone(),
             s: [0.0, 0.0],
         }
     }
