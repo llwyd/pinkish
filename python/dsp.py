@@ -112,6 +112,7 @@ class EQButterBand():
             self.sos = np.append(self.sos,self.filter2,axis=0)
         
         print(f'EQBand: {lower_cutoff} <-> {upper_cutoff} g: {self.gain} fs:{self.fs}')
+        print(f'{self.sos}');
 
 
 def fft(x,fs,fft_len,norm=None):

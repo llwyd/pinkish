@@ -17,10 +17,12 @@ mod noise;
 mod voss;
 mod gain;
 mod biquad;
+mod filterbank;
 
 use crate::gain::Gain;
 use crate::noise::Noise;
 use crate::biquad::Biquad;
+use crate::filterbank::FilterBank;
 
 fn main() -> eframe::Result{
 
@@ -46,9 +48,11 @@ fn main() -> eframe::Result{
     let mut stereo = [Noise::new(),Noise::new()];
     let biquad_gain = Arc::new(RwLock::new(1.0));
     let mut filter = [
-        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],biquad_gain.clone()),
-        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0],biquad_gain.clone())
+        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0]),
+        Biquad::new([0.00764556, 0.00764556, 0.0],[-0.98470888,0.0])
     ];
+
+    let noise = Noise::new();
     let value = g.clone();
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
