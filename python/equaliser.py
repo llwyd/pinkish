@@ -8,16 +8,16 @@ import fp_dsp as fp
 import q_arithmetic as qmath
 from tqdm import tqdm
 
-num_bands = 4
+num_bands = 6
 fs = 48000
-sig_len = 8192 
+sig_len = fs 
 order = 1
 axcolor = 'lightgoldenrodyellow'
 fig, ax = plt.subplots(figsize=(8,6))
 
 plt.subplots_adjust(bottom=0.35)
-plt.hlines(-3,0,fs/2)
-plt.xlim(10,fs/2)
+plt.hlines(0.0,0,fs/2)
+plt.xlim(1,fs/2)
 plt.ylim(-30,5)
 plt.xlabel('Frequency (Hz)')
 plt.ylabel('Magnitude (dB)')
@@ -52,10 +52,12 @@ axbutton = fig.add_axes([0.75, 0.1, 0.1, 0.075])
 genbutton = Button(axbutton,'Generate')
 genbutton.on_clicked(generate)
 
-freqs = dsp.calculate_bands(num_bands,fs)
+freqs = dsp.calculate_bands(num_bands,20,fs)
 eq_bands = []
+bp_gain = (num_bands - 2) * 0.465
+gain = 0.0
 for i in range(0,num_bands):
-    eq_bands.append(dsp.EQButterBand(freqs[i],freqs[i+1],fs,order, 0.0))
+    eq_bands.append(dsp.EQButterBand(freqs[i],freqs[i+1],fs,order, gain))
 
 h = signal.unit_impulse(sig_len)
 H, Hf, Hdb = dsp.fft(h, fs, sig_len)    
@@ -97,6 +99,7 @@ def update_graph(val):
 for i in range(0, num_bands):
     h = signal.unit_impulse(sig_len)
     m = signal.sosfilt(eq_bands[i].sos,h)
+    m *= eq_bands[i].gain_raw()
     y += m
     M, Mf,Mdb = dsp.fft(m, fs, sig_len)    
     f.append(m)

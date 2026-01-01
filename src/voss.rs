@@ -40,8 +40,8 @@ impl Pink{
         assert!(self.counter > 0);
         assert!(self.counter <= self.rollover);
         
-        self.counter = self.counter & (self.rollover - 1); 
-        self.counter = self.counter + 1;
+        self.counter &= self.rollover - 1; 
+        self.counter += 1;
     }
 
     /* Generates a new sample using the Voss-McCartney algorithm
@@ -52,13 +52,13 @@ impl Pink{
         let index = self.get_noise_index() as usize;
         assert!( index < self.generators as usize );
 
-        self.pink = self.pink - self.noise[index].value();
+        self.pink -= self.noise[index].value();
         self.noise[index].update();
-        self.pink = self.pink + self.noise[index].value();
+        self.pink += self.noise[index].value();
 
-        self.pink = self.pink - self.white.value();
+        self.pink -= self.white.value();
         self.white.update();
-        self.pink = self.pink + self.white.value(); 
+        self.pink += self.white.value(); 
 
         self.increment_counter();
 

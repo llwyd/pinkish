@@ -11,8 +11,8 @@ impl Biquad{
         
         Biquad
         {
-            a: a,
-            b: b,
+            a,
+            b,
             s: [0.0, 0.0],
         }
     }
