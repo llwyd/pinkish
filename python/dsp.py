@@ -111,8 +111,8 @@ class EQButterBand():
         if self.filter2 is not None:
             self.sos = np.append(self.sos,self.filter2,axis=0)
         
-        print(f'EQBand: {lower_cutoff} <-> {upper_cutoff} g: {self.gain} fs:{self.fs}')
-        print(f'{self.sos}');
+        #print(f'EQBand: {lower_cutoff} <-> {upper_cutoff} g: {self.gain} fs:{self.fs}')
+        #print(f'{self.sos}');
 
 class EQButterBand2():
     def gain_raw(self):

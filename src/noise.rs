@@ -13,6 +13,8 @@ impl Noise{
     }
     pub fn update(&mut self) -> f32{
         self.value = (random::<f32>() * 2.0) - 1.0;
+        assert!(self.value < 1.05);
+        assert!(self.value > -1.05);
         self.value
     }
     

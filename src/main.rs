@@ -5,44 +5,232 @@ use cpal::traits::{
 };
 
 use std::sync::{Arc, RwLock};
-use std::io::prelude::*;
-use std::fs::File;
-use std::collections::HashMap;
 use eframe::egui;
 use egui::{Align,Layout,Slider,SliderOrientation};
-use serde::Deserialize;
-use toml::{Value, de::Error};
 
+mod eq;
 mod noise;
 mod voss;
 mod gain;
 mod biquad;
 mod filterbank;
+mod crossover;
+mod filter_coeffs_48000;
 
+use crate::eq::Equaliser;
+use crate::crossover::*;
 use crate::gain::Gain;
 use crate::noise::Noise;
 use crate::biquad::Biquad;
-use crate::filterbank::FilterBank;
 
-#[derive(Deserialize, Debug)]
-struct FilterConfig{
-    fs: u32,
-    filter0: Vec<Vec<f32>>,
-    filter1: Vec<Vec<f32>>,
-    filter2: Vec<Vec<f32>>,
-    filter3: Vec<Vec<f32>>,
-    filter4: Vec<Vec<f32>>,
-    filter5: Vec<Vec<f32>>,
+//const DEFAULT_CROSSOVER_GAIN:f32 = 0.70795; 
+
+const VOLUME_SLIDER_MAX:f32 = 0.70795;
+const NOISE_PRESCALAR:f32 = 0.707;
+const DEFAULT_CROSSOVER_GAIN:f32 = 1.0;
+const GAIN_SLIDER_MAX:f32 = DEFAULT_CROSSOVER_GAIN;
+const GAIN_SLIDER_MIN:f32 = 0.001;
+const GAIN_SLIDER_INC:f64 = 0.00001;
+
+#[derive(Clone,Debug,PartialEq)]
+enum AudioChannels
+{
+    Mono,
+    Stereo,
+}
+
+fn load_filters() -> (CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads)
+{
+    let mut filter_0_bq = CrossoverBiquads{
+        lpf: Vec::new(),
+        hpf: Vec::new()
+    };
+    let mut filter_1_bq = CrossoverBiquads{
+        lpf: Vec::new(),
+        hpf: Vec::new()
+    };
+    let mut filter_2_bq = CrossoverBiquads{
+        lpf: Vec::new(),
+        hpf: Vec::new()
+    };
+    let mut filter_3_bq = CrossoverBiquads{
+        lpf: Vec::new(),
+        hpf: Vec::new()
+    };
+    let mut filter_4_bq = CrossoverBiquads{
+        lpf: Vec::new(),
+        hpf: Vec::new()
+    };
+    for i in 0..filter_coeffs_48000::FILTER_0_LPF.len()
+    {
+        filter_0_bq.lpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_0_LPF[i][0],
+                    filter_coeffs_48000::FILTER_0_LPF[i][1],
+                    filter_coeffs_48000::FILTER_0_LPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_0_LPF[i][4],
+                    filter_coeffs_48000::FILTER_0_LPF[i][5]
+                ])
+            );
+    }
+    for i in 0..filter_coeffs_48000::FILTER_0_HPF.len()
+    {
+        filter_0_bq.hpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_0_HPF[i][0],
+                    filter_coeffs_48000::FILTER_0_HPF[i][1],
+                    filter_coeffs_48000::FILTER_0_HPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_0_HPF[i][4],
+                    filter_coeffs_48000::FILTER_0_HPF[i][5]
+                ])
+            );
+    }
+    for i in 0..filter_coeffs_48000::FILTER_1_LPF.len()
+    {
+        filter_1_bq.lpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_1_LPF[i][0],
+                    filter_coeffs_48000::FILTER_1_LPF[i][1],
+                    filter_coeffs_48000::FILTER_1_LPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_1_LPF[i][4],
+                    filter_coeffs_48000::FILTER_1_LPF[i][5]
+                ])
+            );
+    }
+    for i in 0..filter_coeffs_48000::FILTER_1_HPF.len()
+    {
+        filter_1_bq.hpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_1_HPF[i][0],
+                    filter_coeffs_48000::FILTER_1_HPF[i][1],
+                    filter_coeffs_48000::FILTER_1_HPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_1_HPF[i][4],
+                    filter_coeffs_48000::FILTER_1_HPF[i][5]
+                ])
+            );
+    }
+    
+    /* Filter 2 */
+    for i in 0..filter_coeffs_48000::FILTER_2_LPF.len()
+    {
+        filter_2_bq.lpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_2_LPF[i][0],
+                    filter_coeffs_48000::FILTER_2_LPF[i][1],
+                    filter_coeffs_48000::FILTER_2_LPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_2_LPF[i][4],
+                    filter_coeffs_48000::FILTER_2_LPF[i][5]
+                ])
+            );
+    }
+    for i in 0..filter_coeffs_48000::FILTER_2_HPF.len()
+    {
+        filter_2_bq.hpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_2_HPF[i][0],
+                    filter_coeffs_48000::FILTER_2_HPF[i][1],
+                    filter_coeffs_48000::FILTER_2_HPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_2_HPF[i][4],
+                    filter_coeffs_48000::FILTER_2_HPF[i][5]
+                ])
+            );
+    }
+    
+    /* Filter 3 */
+    for i in 0..filter_coeffs_48000::FILTER_3_LPF.len()
+    {
+        filter_3_bq.lpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_3_LPF[i][0],
+                    filter_coeffs_48000::FILTER_3_LPF[i][1],
+                    filter_coeffs_48000::FILTER_3_LPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_3_LPF[i][4],
+                    filter_coeffs_48000::FILTER_3_LPF[i][5]
+                ])
+            );
+    }
+    for i in 0..filter_coeffs_48000::FILTER_3_HPF.len()
+    {
+        filter_3_bq.hpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_3_HPF[i][0],
+                    filter_coeffs_48000::FILTER_3_HPF[i][1],
+                    filter_coeffs_48000::FILTER_3_HPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_3_HPF[i][4],
+                    filter_coeffs_48000::FILTER_3_HPF[i][5]
+                ])
+            );
+    }
+
+    /* Filter 4 */
+    for i in 0..filter_coeffs_48000::FILTER_4_LPF.len()
+    {
+        filter_4_bq.lpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_4_LPF[i][0],
+                    filter_coeffs_48000::FILTER_4_LPF[i][1],
+                    filter_coeffs_48000::FILTER_4_LPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_4_LPF[i][4],
+                    filter_coeffs_48000::FILTER_4_LPF[i][5]
+                ])
+            );
+    }
+    for i in 0..filter_coeffs_48000::FILTER_4_HPF.len()
+    {
+        filter_4_bq.hpf.push(
+            Biquad::new(
+                [
+                    filter_coeffs_48000::FILTER_4_HPF[i][0],
+                    filter_coeffs_48000::FILTER_4_HPF[i][1],
+                    filter_coeffs_48000::FILTER_4_HPF[i][2]
+                ],
+                [
+                    filter_coeffs_48000::FILTER_4_HPF[i][4],
+                    filter_coeffs_48000::FILTER_4_HPF[i][5]
+                ])
+            );
+    }
+    
+
+    (
+    filter_0_bq.clone(),
+    filter_1_bq.clone(),
+    filter_2_bq.clone(),
+    filter_3_bq.clone(),
+    filter_4_bq.clone(),
+    )
 }
 
 fn main() -> eframe::Result{
 
-    let mut config_file = File::open("autogen/filters.toml").expect("Failed to open config file");
-    let mut config_str = String::new();
-    config_file.read_to_string(&mut config_str).expect("Failed to read TOML config");
-
-    let fc:FilterConfig = toml::from_str(&config_str).expect("Failed to parse TOML config");
-    
+    let num_bands = 6;
     let options = eframe::NativeOptions
     {
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
@@ -58,122 +246,92 @@ fn main() -> eframe::Result{
 
     let num_channels = config.channels() as usize;
     println!("Channels: {}", num_channels);
-    let bq_gain0 = Arc::new(RwLock::new(0.5));
-    let bq_gain1 = Arc::new(RwLock::new(0.5));
-    let bq_gain2 = Arc::new(RwLock::new(0.5));
-    let bq_gain3 = Arc::new(RwLock::new(0.5));
-    let bq_gain4 = Arc::new(RwLock::new(0.5));
-    let bq_gain5 = Arc::new(RwLock::new(0.5));
+
+    let channels:Arc<RwLock<AudioChannels>> = Arc::new(RwLock::new(AudioChannels::Stereo));
 
     let mut stereo_noise = [Noise::new(),Noise::new()]; 
-    let mut stereo_eq =
-        [[
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter0[0][0], fc.filter0[0][1], fc.filter0[0][2]],
-                    [fc.filter0[0][4], fc.filter0[0][5]])],
-                    bq_gain0.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter1[0][0], fc.filter1[0][1], fc.filter1[0][2]],
-                    [fc.filter1[0][4], fc.filter1[0][5]]),
-                    Biquad::new(
-                    [fc.filter1[1][0], fc.filter1[1][1], fc.filter1[1][2]],
-                    [fc.filter1[1][4], fc.filter1[1][5]])],
-                    bq_gain1.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter2[0][0], fc.filter2[0][1], fc.filter2[0][2]],
-                    [fc.filter2[0][4], fc.filter2[0][5]]),
-                    Biquad::new(
-                    [fc.filter2[1][0], fc.filter2[1][1], fc.filter2[1][2]],
-                    [fc.filter2[1][4], fc.filter2[1][5]])],
-                    bq_gain2.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter3[0][0], fc.filter3[0][1], fc.filter3[0][2]],
-                    [fc.filter3[0][4], fc.filter3[0][5]]),
-                    Biquad::new(
-                    [fc.filter3[1][0], fc.filter3[1][1], fc.filter3[1][2]],
-                    [fc.filter3[1][4], fc.filter3[1][5]])],
-                    bq_gain3.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter4[0][0], fc.filter4[0][1], fc.filter4[0][2]],
-                    [fc.filter4[0][4], fc.filter4[0][5]]),
-                    Biquad::new(
-                    [fc.filter4[1][0], fc.filter4[1][1], fc.filter4[1][2]],
-                    [fc.filter4[1][4], fc.filter4[1][5]])],
-                    bq_gain4.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter5[0][0], fc.filter5[0][1], fc.filter5[0][2]],
-                    [fc.filter5[0][4], fc.filter5[0][5]])],
-                    bq_gain5.clone()), 
-        ],
-        [
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter0[0][0], fc.filter0[0][1], fc.filter0[0][2]],
-                    [fc.filter0[0][4], fc.filter0[0][5]])],
-                    bq_gain0.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter1[0][0], fc.filter1[0][1], fc.filter1[0][2]],
-                    [fc.filter1[0][4], fc.filter1[0][5]]),
-                    Biquad::new(
-                    [fc.filter1[1][0], fc.filter1[1][1], fc.filter1[1][2]],
-                    [fc.filter1[1][4], fc.filter1[1][5]])],
-                    bq_gain1.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter2[0][0], fc.filter2[0][1], fc.filter2[0][2]],
-                    [fc.filter2[0][4], fc.filter2[0][5]]),
-                    Biquad::new(
-                    [fc.filter2[1][0], fc.filter2[1][1], fc.filter2[1][2]],
-                    [fc.filter2[1][4], fc.filter2[1][5]])],
-                    bq_gain2.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter3[0][0], fc.filter3[0][1], fc.filter3[0][2]],
-                    [fc.filter3[0][4], fc.filter3[0][5]]),
-                    Biquad::new(
-                    [fc.filter3[1][0], fc.filter3[1][1], fc.filter3[1][2]],
-                    [fc.filter3[1][4], fc.filter3[1][5]])],
-                    bq_gain3.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter4[0][0], fc.filter4[0][1], fc.filter4[0][2]],
-                    [fc.filter4[0][4], fc.filter4[0][5]]),
-                    Biquad::new(
-                    [fc.filter4[1][0], fc.filter4[1][1], fc.filter4[1][2]],
-                    [fc.filter4[1][4], fc.filter4[1][5]])],
-                    bq_gain4.clone()),
-            FilterBank::new(
-                vec![Biquad::new(
-                    [fc.filter5[0][0], fc.filter5[0][1], fc.filter5[0][2]],
-                    [fc.filter5[0][4], fc.filter5[0][5]])],
-                    bq_gain5.clone()), 
-        ]];
-        
+
+    let band_gain: Arc<RwLock<Vec<f32>>> = Arc::new(RwLock::new(Vec::new()));
+    
+    for _i in 0..num_bands
+    {
+        band_gain.write().unwrap().push(DEFAULT_CROSSOVER_GAIN);
+    }
+
+    let (co0, co1, co2, co3, co4) = load_filters();
+    let mut lr_eq = [
+        Equaliser::new(
+                vec![
+                        Crossover::new(co0.lpf.clone(), co0.hpf.clone()), 
+                        Crossover::new(co1.lpf.clone(), co1.hpf.clone()), 
+                        Crossover::new(co2.lpf.clone(), co2.hpf.clone()), 
+                        Crossover::new(co3.lpf.clone(), co3.hpf.clone()), 
+                        Crossover::new(co4.lpf.clone(), co4.hpf.clone()), 
+                    ],
+                    band_gain.clone()
+                ),
+        Equaliser::new(
+                vec![
+                        Crossover::new(co0.lpf.clone(), co0.hpf.clone()), 
+                        Crossover::new(co1.lpf.clone(), co1.hpf.clone()), 
+                        Crossover::new(co2.lpf.clone(), co2.hpf.clone()), 
+                        Crossover::new(co3.lpf.clone(), co3.hpf.clone()), 
+                        Crossover::new(co4.lpf.clone(), co4.hpf.clone()), 
+                    ],
+                    band_gain.clone()
+                )
+    ];
+
+    let eq_gain = lr_eq[0].gain();
+    /*
+    eq_gain.write().unwrap()[0] = filter_coeffs_48000::PINK_GAIN[0];
+    eq_gain.write().unwrap()[1] = filter_coeffs_48000::PINK_GAIN[1];
+    eq_gain.write().unwrap()[2] = filter_coeffs_48000::PINK_GAIN[2];
+    eq_gain.write().unwrap()[3] = filter_coeffs_48000::PINK_GAIN[3];
+    eq_gain.write().unwrap()[4] = filter_coeffs_48000::PINK_GAIN[4];
+    eq_gain.write().unwrap()[5] = filter_coeffs_48000::PINK_GAIN[5];
+*/
     let value = g.clone();
+    *value.write().unwrap().ptr() = 0.5;
+    let chnls = channels.clone();
+
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
-        let master_gain = value.write().unwrap().value();
-        
+        let master_gain = value.read().unwrap().value();
+        let c = chnls.read().unwrap();
         for frame in data.chunks_mut(num_channels)
         {
+        //    let n = noise.update();
+
+        //    let next = lr_eq.next(n);
+            let mut stereo_out: [f32;2] = [0.0, 0.0];
             for (idx,sample) in frame.iter_mut().enumerate()
             {
-                let n = stereo_noise[idx].update();
-                let mut next = 0.0;
                 
-                for e in &mut stereo_eq[idx]{
-                    next += e.next(n);
+                /* Scale the noise source to avoid overflow due to float
+                 * maths
+                 */
+                let inp = stereo_noise[idx].update() * NOISE_PRESCALAR;
+                
+                let fout = lr_eq[idx].next(inp);
+              
+                let out = fout * master_gain;
+                if !(out <= 1.0) || !(out >= -1.0)
+                {
+                    println!(" inp: {:?}", inp );
+                    println!("fout: {:?}", fout );
+                    println!(" out: {:?}", out );
+                    println!("gain: {:?}", master_gain );
+                    panic!()
                 }
-                
-                *sample = next * master_gain;
+                stereo_out[idx] = out;
+
+                match *c
+                {
+                    AudioChannels::Mono => {*sample = stereo_out[0]},
+                    AudioChannels::Stereo => {*sample = stereo_out[idx]}
+                }
             }
         }
     },
@@ -192,44 +350,32 @@ fn main() -> eframe::Result{
             |cc|{
                 Ok(Box::new(PinkishApp::new(cc, 
                             g.clone(),
-                            bq_gain0.clone(),
-                            bq_gain1.clone(),
-                            bq_gain2.clone(),
-                            bq_gain3.clone(),
-                            bq_gain4.clone(),
-                            bq_gain5.clone()
+                            eq_gain.clone(),
+                            filter_coeffs_48000::PINK_GAIN,
+                            channels.clone(),
                             )))
             }))
 }
 
 struct PinkishApp {
     gain:Arc<RwLock<Gain>>,
-    bq_gain0:Arc<RwLock<f32>>,
-    bq_gain1:Arc<RwLock<f32>>,
-    bq_gain2:Arc<RwLock<f32>>,
-    bq_gain3:Arc<RwLock<f32>>,
-    bq_gain4:Arc<RwLock<f32>>,
-    bq_gain5:Arc<RwLock<f32>>,
+    eq_gain:Arc<RwLock<Vec<f32>>>,
+    pink_gain: [f32;6],
+    channels: Arc<RwLock<AudioChannels>>,
 }
 
 impl PinkishApp{
     fn new(_cc: &eframe::CreationContext<'_>,
         gain: Arc<RwLock<Gain>>,
-        bq_gain0: Arc<RwLock<f32>>,
-        bq_gain1: Arc<RwLock<f32>>,
-        bq_gain2: Arc<RwLock<f32>>,
-        bq_gain3: Arc<RwLock<f32>>,
-        bq_gain4: Arc<RwLock<f32>>,
-        bq_gain5: Arc<RwLock<f32>>
+        eq_gain:Arc<RwLock<Vec<f32>>>,
+        pink_gain: [f32;6],
+        channels: Arc<RwLock<AudioChannels>>,
         ) -> Self{
         Self{
             gain: gain.clone(),
-            bq_gain0: bq_gain0.clone(),
-            bq_gain1: bq_gain1.clone(),
-            bq_gain2: bq_gain2.clone(),
-            bq_gain3: bq_gain3.clone(),
-            bq_gain4: bq_gain4.clone(),
-            bq_gain5: bq_gain5.clone(),
+            eq_gain: eq_gain.clone(),
+            pink_gain,
+            channels,
         }
     }
 }
@@ -247,61 +393,67 @@ impl eframe::App for PinkishApp{
                     self.gain.write().unwrap().resume();
                 }
                 if ui.button("Pink").clicked(){
-                    *self.bq_gain0.write().unwrap() = 0.8222;
-                    *self.bq_gain1.write().unwrap() = 0.2113;
-                    *self.bq_gain2.write().unwrap() = 0.0989;
-                    *self.bq_gain3.write().unwrap() = 0.0507;
+                    self.eq_gain.write().unwrap()[0] = self.pink_gain[0];
+                    self.eq_gain.write().unwrap()[1] = self.pink_gain[1];
+                    self.eq_gain.write().unwrap()[2] = self.pink_gain[2];
+                    self.eq_gain.write().unwrap()[3] = self.pink_gain[3];
+                    self.eq_gain.write().unwrap()[4] = self.pink_gain[4];
+                    self.eq_gain.write().unwrap()[5] = self.pink_gain[5];
                 }
-                if ui.button("White").clicked(){
-                    *self.bq_gain0.write().unwrap() = 1.0;
-                    *self.bq_gain1.write().unwrap() = 0.75;
-                    *self.bq_gain2.write().unwrap() = 0.75;
-                    *self.bq_gain3.write().unwrap() = 1.0;
-                }
+                ui.radio_value(&mut *self.channels.write().unwrap(), AudioChannels::Mono, "Mono");
+                ui.radio_value(&mut *self.channels.write().unwrap(), AudioChannels::Stereo, "Stereo");
             });
             ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
             {
                 ui.add(
-                    Slider::new(&mut *self.gain.write().unwrap().ptr(), 0.0..=1.0)
+                    Slider::new(&mut *self.gain.write().unwrap().ptr(), 0.0..=VOLUME_SLIDER_MAX)
                     .text("Gain")
                     .orientation(SliderOrientation::Vertical)
                     .step_by(0.1)
+                    .show_value(false)
                     );
                 ui.add(
-                    Slider::new(&mut *self.bq_gain0.write().unwrap(), 0.00001..=1.0)
+                    Slider::new(&mut self.eq_gain.write().unwrap()[0], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.001)
+                    .step_by(GAIN_SLIDER_INC)
                     .logarithmic(true)
+                    .show_value(false)
                     );
                 ui.add(
-                    Slider::new(&mut *self.bq_gain1.write().unwrap(), 0.00001..=1.0)
+                    Slider::new(&mut self.eq_gain.write().unwrap()[1], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.001)
+                    .step_by(GAIN_SLIDER_INC)
                     .logarithmic(true)
+                    .show_value(false)
                     );
                 ui.add(
-                    Slider::new(&mut *self.bq_gain2.write().unwrap(), 0.00001..=1.0)
+                    Slider::new(&mut self.eq_gain.write().unwrap()[2], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.001)
+                    .step_by(GAIN_SLIDER_INC)
                     .logarithmic(true)
+                    .show_value(false)
                     );
                 ui.add(
-                    Slider::new(&mut *self.bq_gain3.write().unwrap(), 0.00001..=1.0)
+                    Slider::new(&mut self.eq_gain.write().unwrap()[3], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.001)
+                    .step_by(GAIN_SLIDER_INC)
                     .logarithmic(true)
+                    .show_value(false)
                     );
                 ui.add(
-                    Slider::new(&mut *self.bq_gain4.write().unwrap(), 0.00001..=1.0)
+                    Slider::new(&mut self.eq_gain.write().unwrap()[4], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
                     .orientation(SliderOrientation::Vertical)
                     .step_by(0.001)
+                    .step_by(GAIN_SLIDER_INC)
                     .logarithmic(true)
+                    .show_value(false)
                     );
                 ui.add(
-                    Slider::new(&mut *self.bq_gain5.write().unwrap(), 0.00001..=1.0)
+                    Slider::new(&mut self.eq_gain.write().unwrap()[5], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.001)
+                    .step_by(GAIN_SLIDER_INC)
                     .logarithmic(true)
+                    .show_value(false)
                     );
             });
         });

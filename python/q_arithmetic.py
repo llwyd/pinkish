@@ -1,7 +1,6 @@
 import numpy as np
 from scipy import signal
 import dsp
-import noise
 from enum import Enum
 
 int_type = np.uint32

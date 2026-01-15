@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone,Debug)]
 pub struct Biquad{
     a:[f32;3],
     b:[f32;2],
