@@ -16,17 +16,18 @@ mod biquad;
 mod filterbank;
 mod crossover;
 mod filter_coeffs_48000;
+mod rms;
 
 use crate::eq::Equaliser;
 use crate::crossover::*;
 use crate::gain::Gain;
 use crate::noise::Noise;
 use crate::biquad::Biquad;
-
+use crate::rms::RMS;
 //const DEFAULT_CROSSOVER_GAIN:f32 = 0.70795; 
 
 const VOLUME_SLIDER_MAX:f32 = 0.70795;
-const NOISE_PRESCALAR:f32 = 0.707;
+const NOISE_PRESCALAR:f32 = 1.0; //0.707;
 const DEFAULT_CROSSOVER_GAIN:f32 = 1.0;
 const GAIN_SLIDER_MAX:f32 = DEFAULT_CROSSOVER_GAIN;
 const GAIN_SLIDER_MIN:f32 = 0.001;
@@ -245,7 +246,9 @@ fn main() -> eframe::Result{
     assert!(config.sample_format() == cpal::SampleFormat::F32);
 
     let num_channels = config.channels() as usize;
+    let fs = config.sample_rate() as f32;
     println!("Channels: {}", num_channels);
+    println!("fs: {fs}");
 
     let channels:Arc<RwLock<AudioChannels>> = Arc::new(RwLock::new(AudioChannels::Stereo));
 
@@ -292,9 +295,13 @@ fn main() -> eframe::Result{
     eq_gain.write().unwrap()[5] = filter_coeffs_48000::PINK_GAIN[5];
 */
     let value = g.clone();
-    *value.write().unwrap().ptr() = 0.5;
+    *value.write().unwrap().ptr() = 0.0;
     let chnls = channels.clone();
 
+    let rms_freq = 1000.0;
+    let mut rms = Arc::new(RwLock::new([RMS::new(rms_freq, fs),RMS::new(rms_freq,fs)]));
+
+    let audio_rms = rms.clone();
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
@@ -306,6 +313,7 @@ fn main() -> eframe::Result{
 
         //    let next = lr_eq.next(n);
             let mut stereo_out: [f32;2] = [0.0, 0.0];
+            let mut rms_out: [f32;2] = [0.0, 0.0];
             for (idx,sample) in frame.iter_mut().enumerate()
             {
                 
@@ -317,7 +325,7 @@ fn main() -> eframe::Result{
                 let fout = lr_eq[idx].next(inp);
               
                 let out = fout * master_gain;
-                if !(out <= 1.0) || !(out >= -1.0)
+                if !(fout <= 1.0) || !(fout >= -1.0)
                 {
                     println!(" inp: {:?}", inp );
                     println!("fout: {:?}", fout );
@@ -327,12 +335,14 @@ fn main() -> eframe::Result{
                 }
                 stereo_out[idx] = out;
 
+                rms_out[idx] = audio_rms.write().unwrap()[idx].next(fout);
                 match *c
                 {
                     AudioChannels::Mono => {*sample = stereo_out[0]},
                     AudioChannels::Stereo => {*sample = stereo_out[idx]}
                 }
             }
+            //println!("RMS: ({:?}, {:?})", rms_out[0],rms_out[1]);
         }
     },
     move |_err|
@@ -353,6 +363,7 @@ fn main() -> eframe::Result{
                             eq_gain.clone(),
                             filter_coeffs_48000::PINK_GAIN,
                             channels.clone(),
+                            rms.clone()
                             )))
             }))
 }
@@ -362,6 +373,7 @@ struct PinkishApp {
     eq_gain:Arc<RwLock<Vec<f32>>>,
     pink_gain: [f32;6],
     channels: Arc<RwLock<AudioChannels>>,
+    rms: Arc<RwLock<[RMS;2]>>,
 }
 
 impl PinkishApp{
@@ -370,12 +382,14 @@ impl PinkishApp{
         eq_gain:Arc<RwLock<Vec<f32>>>,
         pink_gain: [f32;6],
         channels: Arc<RwLock<AudioChannels>>,
+        rms: Arc<RwLock<[RMS;2]>>,
         ) -> Self{
         Self{
             gain: gain.clone(),
             eq_gain: eq_gain.clone(),
             pink_gain,
             channels,
+            rms: rms.clone(),
         }
     }
 }
@@ -455,6 +469,11 @@ impl eframe::App for PinkishApp{
                     .logarithmic(true)
                     .show_value(false)
                     );
+            });
+            ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
+            {
+                ui.label(format!("L-RMS: {}", self.rms.read().unwrap()[0].value()));
+                ui.label(format!("L-RMS: {}", self.rms.read().unwrap()[1].value()));
             });
         });
     }
