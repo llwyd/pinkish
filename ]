@@ -1,0 +1,50 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from matplotlib.widgets import Slider, Button, RadioButtons
+from scipy import signal
+from scipy.io.wavfile import write
+import dsp
+import q_arithmetic as qmath
+from tqdm import tqdm
+import random as r
+
+
+def ewma( dirac, alpha, length ):
+    y = np.zeros( length )
+    for i in range( length ):
+        y[i] = dirac[i] - alpha*(dirac[i] - y[i-1])
+    return y
+
+fs = 48000
+sig_len = fs * 10
+f = 100
+
+t = np.linspace(0,sig_len,sig_len)
+x = np.sin(2 * np.pi * f * (t/fs))
+z = np.zeros(sig_len)
+
+cutoff = 0.1
+alpha = dsp.get_alpha(cutoff,fs)
+
+#rms = ewma(np.abs(x),alpha,sig_len)
+rms = np.zeros(sig_len)
+
+set_point = 0.5
+set_point_rec = 1 / set_point
+gain = 1.0
+for i in range(sig_len):
+
+    z[i] = np.sin(2 * np.pi * f * (i/fs))
+    z[i] *= gain
+    rms[i] = np.abs(z[i]) - alpha*(np.abs(z[i]) - rms[i-1])
+    
+    delta = set_point - rms[i]
+    gain = 1.0 + (delta * set_point_rec)
+    #print(f'g: {gain}')
+
+post_rms = ewma(np.abs(z),alpha,sig_len)
+
+plt.plot(z)
+plt.plot(rms)
+plt.plot(post_rms)
+plt.show()

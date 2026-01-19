@@ -17,7 +17,10 @@ mod filterbank;
 mod crossover;
 mod filter_coeffs_48000;
 mod rms;
+mod agc;
+mod single_pole_lpf;
 
+use crate::agc::AGC;
 use crate::eq::Equaliser;
 use crate::crossover::*;
 use crate::gain::Gain;
@@ -28,7 +31,7 @@ use crate::rms::RMS;
 
 const VOLUME_SLIDER_MAX:f32 = 0.70795;
 const NOISE_PRESCALAR:f32 = 1.0; //0.707;
-const DEFAULT_CROSSOVER_GAIN:f32 = 1.0;
+const DEFAULT_CROSSOVER_GAIN:f32 = 0.707;
 const GAIN_SLIDER_MAX:f32 = DEFAULT_CROSSOVER_GAIN;
 const GAIN_SLIDER_MIN:f32 = 0.001;
 const GAIN_SLIDER_INC:f64 = 0.00001;
@@ -237,7 +240,6 @@ fn main() -> eframe::Result{
         viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
         ..Default::default()
     };
-    let g = Arc::new(RwLock::new(Gain::new()));
     
     let host = cpal::default_host();
     let device = host.default_output_device().expect("Host Device error");    
@@ -271,8 +273,9 @@ fn main() -> eframe::Result{
                         Crossover::new(co3.lpf.clone(), co3.hpf.clone()), 
                         Crossover::new(co4.lpf.clone(), co4.hpf.clone()), 
                     ],
-                    band_gain.clone()
-                ),
+                    band_gain.clone(),
+                    fs
+                    ),
         Equaliser::new(
                 vec![
                         Crossover::new(co0.lpf.clone(), co0.hpf.clone()), 
@@ -281,31 +284,31 @@ fn main() -> eframe::Result{
                         Crossover::new(co3.lpf.clone(), co3.hpf.clone()), 
                         Crossover::new(co4.lpf.clone(), co4.hpf.clone()), 
                     ],
-                    band_gain.clone()
+                    band_gain.clone(),
+                    fs
                 )
     ];
 
     let eq_gain = lr_eq[0].gain();
-    /*
-    eq_gain.write().unwrap()[0] = filter_coeffs_48000::PINK_GAIN[0];
-    eq_gain.write().unwrap()[1] = filter_coeffs_48000::PINK_GAIN[1];
-    eq_gain.write().unwrap()[2] = filter_coeffs_48000::PINK_GAIN[2];
-    eq_gain.write().unwrap()[3] = filter_coeffs_48000::PINK_GAIN[3];
-    eq_gain.write().unwrap()[4] = filter_coeffs_48000::PINK_GAIN[4];
-    eq_gain.write().unwrap()[5] = filter_coeffs_48000::PINK_GAIN[5];
-*/
-    let value = g.clone();
-    *value.write().unwrap().ptr() = 0.0;
+    
+    let master_gain = Arc::new(RwLock::new(Gain::new()));
+    let gain = master_gain.clone();
+    *gain.write().unwrap().ptr() = 0.0;
     let chnls = channels.clone();
 
-    let rms_freq = 1000.0;
-    let mut rms = Arc::new(RwLock::new([RMS::new(rms_freq, fs),RMS::new(rms_freq,fs)]));
-
+    let rms_freq = 1.0;
+    let rms = Arc::new(RwLock::new([RMS::new(rms_freq, fs),RMS::new(rms_freq,fs)]));
     let audio_rms = rms.clone();
+    let set_point = 0.1;
+    let mut agc = [
+        AGC::new(set_point),
+        AGC::new(set_point)
+    ];
+    
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
-        let master_gain = value.read().unwrap().value();
+        let master_gain = gain.read().unwrap().value();
         let c = chnls.read().unwrap();
         for frame in data.chunks_mut(num_channels)
         {
@@ -323,26 +326,31 @@ fn main() -> eframe::Result{
                 let inp = stereo_noise[idx].update() * NOISE_PRESCALAR;
                 
                 let fout = lr_eq[idx].next(inp);
+                let gout = fout * agc[idx].gain();
+                rms_out[idx] = audio_rms.write().unwrap()[idx].next(gout);
               
-                let out = fout * master_gain;
-                if !(fout <= 1.0) || !(fout >= -1.0)
+                agc[idx].update(rms_out[idx]);
+
+                let out = gout * master_gain;
+                if !(out <= 1.0) || !(out >= -1.0)
                 {
                     println!(" inp: {:?}", inp );
                     println!("fout: {:?}", fout );
+                    println!("gout: {:?}", gout );
                     println!(" out: {:?}", out );
                     println!("gain: {:?}", master_gain );
                     panic!()
                 }
                 stereo_out[idx] = out;
 
-                rms_out[idx] = audio_rms.write().unwrap()[idx].next(fout);
                 match *c
                 {
                     AudioChannels::Mono => {*sample = stereo_out[0]},
                     AudioChannels::Stereo => {*sample = stereo_out[idx]}
                 }
             }
-            //println!("RMS: ({:?}, {:?})", rms_out[0],rms_out[1]);
+            println!("AGC: ({:?}, {:?})", agc[0].gain(), agc[1].gain());
+            println!("RMS: ({:?}, {:?})", rms_out[0],rms_out[1]);
         }
     },
     move |_err|
@@ -359,7 +367,7 @@ fn main() -> eframe::Result{
         Box::new(
             |cc|{
                 Ok(Box::new(PinkishApp::new(cc, 
-                            g.clone(),
+                            master_gain.clone(),
                             eq_gain.clone(),
                             filter_coeffs_48000::PINK_GAIN,
                             channels.clone(),
@@ -414,6 +422,14 @@ impl eframe::App for PinkishApp{
                     self.eq_gain.write().unwrap()[4] = self.pink_gain[4];
                     self.eq_gain.write().unwrap()[5] = self.pink_gain[5];
                 }
+                if ui.button("White").clicked(){
+                    self.eq_gain.write().unwrap()[0] = DEFAULT_CROSSOVER_GAIN;
+                    self.eq_gain.write().unwrap()[1] = DEFAULT_CROSSOVER_GAIN;
+                    self.eq_gain.write().unwrap()[2] = DEFAULT_CROSSOVER_GAIN;
+                    self.eq_gain.write().unwrap()[3] = DEFAULT_CROSSOVER_GAIN;
+                    self.eq_gain.write().unwrap()[4] = DEFAULT_CROSSOVER_GAIN;
+                    self.eq_gain.write().unwrap()[5] = DEFAULT_CROSSOVER_GAIN;
+                }
                 ui.radio_value(&mut *self.channels.write().unwrap(), AudioChannels::Mono, "Mono");
                 ui.radio_value(&mut *self.channels.write().unwrap(), AudioChannels::Stereo, "Stereo");
             });
@@ -423,7 +439,7 @@ impl eframe::App for PinkishApp{
                     Slider::new(&mut *self.gain.write().unwrap().ptr(), 0.0..=VOLUME_SLIDER_MAX)
                     .text("Gain")
                     .orientation(SliderOrientation::Vertical)
-                    .step_by(0.1)
+                    .step_by(0.01)
                     .show_value(false)
                     );
                 ui.add(

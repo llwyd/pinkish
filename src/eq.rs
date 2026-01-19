@@ -1,14 +1,20 @@
 use std::sync::{Arc, RwLock};
 
 use crate::crossover::Crossover;
+use crate::single_pole_lpf::SinglePoleLPF;
 
 pub struct Equaliser{
     cross: Vec<Crossover>,
     g:Arc<RwLock<Vec<f32>>>,
+    gain_filter: Vec<SinglePoleLPF>,
+    num_bands: usize,
 }
 
 impl Equaliser{
-    pub fn new(crossovers: Vec<Crossover>, band_gain:Arc<RwLock<Vec<f32>>>
+    const GAIN_CUTOFF:f32 = 0.5;
+    pub fn new(crossovers: Vec<Crossover>,
+        band_gain:Arc<RwLock<Vec<f32>>>,
+        fs: f32,
         ) -> Equaliser{
 
         let num_bands = crossovers.len() + 1;
@@ -16,10 +22,19 @@ impl Equaliser{
         assert!(num_bands > 0);
         println!("Initialising EQ with {} LR Crossover filters and {} bands", crossovers.len(), num_bands);
         
-        Equaliser{
+        let mut e = Equaliser{
             cross: crossovers.clone(),
             g: band_gain.clone(),
+            gain_filter: Vec::new(),
+            num_bands,
+        };
+        
+        for _i in 0..num_bands
+        {
+            e.gain_filter.push(SinglePoleLPF::new(Self::GAIN_CUTOFF, fs));
         }
+
+        e
     }
     pub fn gain(&self) -> Arc<RwLock<Vec<f32>>>
     {
@@ -33,10 +48,15 @@ impl Equaliser{
         let mut out = 0.0;
         for (idx, cross) in self.cross.iter_mut().enumerate()
         {
+            let g = self.g.read().unwrap()[idx];
+            let gain = self.gain_filter[idx].next(g);
             (low, high) = cross.next(high);
-            out += low * self.g.read().unwrap()[idx];
+            out += low * gain;
         }
-        out += high * self.g.read().unwrap().last().unwrap();
+        /* This is shite, FIXME */
+        let g = self.g.read().unwrap()[self.num_bands -1];
+        let gain = self.gain_filter[self.num_bands - 1].next(g);
+        out += high * gain; 
         out
     }
 }
