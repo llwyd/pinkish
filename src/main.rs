@@ -10,10 +10,8 @@ use egui::{Align,Layout,Slider,SliderOrientation};
 
 mod eq;
 mod noise;
-mod voss;
 mod gain;
 mod biquad;
-mod filterbank;
 mod crossover;
 mod filter_coeffs_48000;
 mod rms;

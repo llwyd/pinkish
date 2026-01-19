@@ -17,7 +17,7 @@ impl Noise{
         assert!(self.value > -1.05);
         self.value
     }
-    
+#[allow(dead_code)]    
     pub fn value(&self) -> f32{
         self.value
     }
