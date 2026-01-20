@@ -325,6 +325,8 @@ fn main() -> eframe::Result{
                     println!("fout: {:?}", fout );
                     println!("gout: {:?}", gout );
                     println!(" out: {:?}", out );
+                    println!(" rms: {:?}", rms_out[idx] );
+                    println!(" agc: {:?}", agc[idx].gain() );
                     println!("gain: {:?}", master_gain );
                     panic!()
                 }

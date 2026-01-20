@@ -53,7 +53,7 @@ impl eframe::App for PinkishGUI{
                 }
                 if ui.button("White").clicked(){
 
-                    let white_gain = self.eq_gain.read().unwrap()[0];
+                    let white_gain = DEFAULT_CROSSOVER_GAIN;
                     self.eq_gain.write().unwrap()[0] = white_gain;
                     self.eq_gain.write().unwrap()[1] = white_gain;
                     self.eq_gain.write().unwrap()[2] = white_gain;
