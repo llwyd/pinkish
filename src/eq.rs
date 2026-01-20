@@ -20,7 +20,6 @@ impl Equaliser{
         let num_bands = crossovers.len() + 1;
         assert!(crossovers.len() > 0);
         assert!(num_bands > 0);
-        println!("Initialising EQ with {} LR Crossover filters and {} bands", crossovers.len(), num_bands);
         
         let mut e = Equaliser{
             cross: crossovers.clone(),

@@ -6,16 +6,18 @@ use cpal::traits::{
 
 use std::sync::{Arc, RwLock};
 use eframe::egui;
-use egui::{Align,Layout,Slider,SliderOrientation};
 
-mod eq;
-mod noise;
-mod gain;
+mod agc;
+mod audio_config;
+mod audio_magic;
 mod biquad;
 mod crossover;
+mod eq;
 mod filter_coeffs_48000;
+mod gain;
+mod gui;
+mod noise;
 mod rms;
-mod agc;
 mod single_pole_lpf;
 
 use crate::agc::AGC;
@@ -25,21 +27,9 @@ use crate::gain::Gain;
 use crate::noise::Noise;
 use crate::biquad::Biquad;
 use crate::rms::RMS;
-//const DEFAULT_CROSSOVER_GAIN:f32 = 0.70795; 
-
-const VOLUME_SLIDER_MAX:f32 = 0.70795;
-const NOISE_PRESCALAR:f32 = 1.0; //0.707;
-const DEFAULT_CROSSOVER_GAIN:f32 = 0.707;
-const GAIN_SLIDER_MAX:f32 = DEFAULT_CROSSOVER_GAIN;
-const GAIN_SLIDER_MIN:f32 = 0.001;
-const GAIN_SLIDER_INC:f64 = 0.00001;
-
-#[derive(Clone,Debug,PartialEq)]
-enum AudioChannels
-{
-    Mono,
-    Stereo,
-}
+use crate::audio_config::*;
+use crate::audio_magic::*;
+use crate::gui::*;
 
 fn load_filters() -> (CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads)
 {
@@ -247,8 +237,6 @@ fn main() -> eframe::Result{
 
     let num_channels = config.channels() as usize;
     let fs = config.sample_rate() as f32;
-    println!("Channels: {}", num_channels);
-    println!("fs: {fs}");
 
     let channels:Arc<RwLock<AudioChannels>> = Arc::new(RwLock::new(AudioChannels::Stereo));
 
@@ -310,23 +298,24 @@ fn main() -> eframe::Result{
         let c = chnls.read().unwrap();
         for frame in data.chunks_mut(num_channels)
         {
-        //    let n = noise.update();
-
-        //    let next = lr_eq.next(n);
             let mut stereo_out: [f32;2] = [0.0, 0.0];
             let mut rms_out: [f32;2] = [0.0, 0.0];
+
             for (idx,sample) in frame.iter_mut().enumerate()
             {
+                // Generate white noise
+                let inp = stereo_noise[idx].update();
                 
-                /* Scale the noise source to avoid overflow due to float
-                 * maths
-                 */
-                let inp = stereo_noise[idx].update() * NOISE_PRESCALAR;
-                
+                // Filter according to EQ
                 let fout = lr_eq[idx].next(inp);
+
+                // Apply gain
                 let gout = fout * agc[idx].gain();
+
+                // Calculate RMS
                 rms_out[idx] = audio_rms.write().unwrap()[idx].next(gout);
               
+                // Update gain control
                 agc[idx].update(rms_out[idx]);
 
                 let out = gout * master_gain;
@@ -347,8 +336,10 @@ fn main() -> eframe::Result{
                     AudioChannels::Stereo => {*sample = stereo_out[idx]}
                 }
             }
+            /*
             println!("AGC: ({:?}, {:?})", agc[0].gain(), agc[1].gain());
             println!("RMS: ({:?}, {:?})", rms_out[0],rms_out[1]);
+            */
         }
     },
     move |_err|
@@ -364,7 +355,7 @@ fn main() -> eframe::Result{
         options,
         Box::new(
             |cc|{
-                Ok(Box::new(PinkishApp::new(cc, 
+                Ok(Box::new(PinkishGUI::new(cc, 
                             master_gain.clone(),
                             eq_gain.clone(),
                             filter_coeffs_48000::PINK_GAIN,
@@ -372,124 +363,5 @@ fn main() -> eframe::Result{
                             rms.clone()
                             )))
             }))
-}
-
-struct PinkishApp {
-    gain:Arc<RwLock<Gain>>,
-    eq_gain:Arc<RwLock<Vec<f32>>>,
-    pink_gain: [f32;6],
-    channels: Arc<RwLock<AudioChannels>>,
-    rms: Arc<RwLock<[RMS;2]>>,
-}
-
-impl PinkishApp{
-    fn new(_cc: &eframe::CreationContext<'_>,
-        gain: Arc<RwLock<Gain>>,
-        eq_gain:Arc<RwLock<Vec<f32>>>,
-        pink_gain: [f32;6],
-        channels: Arc<RwLock<AudioChannels>>,
-        rms: Arc<RwLock<[RMS;2]>>,
-        ) -> Self{
-        Self{
-            gain: gain.clone(),
-            eq_gain: eq_gain.clone(),
-            pink_gain,
-            channels,
-            rms: rms.clone(),
-        }
-    }
-}
-
-impl eframe::App for PinkishApp{
-    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
-        egui::CentralPanel::default().show(ctx, |ui|{
-            ui.heading("Pink-ish");
-            ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
-            {
-                if ui.button("Stop").clicked(){
-                    self.gain.write().unwrap().silence();
-                }
-                if ui.button("Start").clicked(){
-                    self.gain.write().unwrap().resume();
-                }
-                if ui.button("Pink").clicked(){
-                    self.eq_gain.write().unwrap()[0] = self.pink_gain[0];
-                    self.eq_gain.write().unwrap()[1] = self.pink_gain[1];
-                    self.eq_gain.write().unwrap()[2] = self.pink_gain[2];
-                    self.eq_gain.write().unwrap()[3] = self.pink_gain[3];
-                    self.eq_gain.write().unwrap()[4] = self.pink_gain[4];
-                    self.eq_gain.write().unwrap()[5] = self.pink_gain[5];
-                }
-                if ui.button("White").clicked(){
-                    self.eq_gain.write().unwrap()[0] = DEFAULT_CROSSOVER_GAIN;
-                    self.eq_gain.write().unwrap()[1] = DEFAULT_CROSSOVER_GAIN;
-                    self.eq_gain.write().unwrap()[2] = DEFAULT_CROSSOVER_GAIN;
-                    self.eq_gain.write().unwrap()[3] = DEFAULT_CROSSOVER_GAIN;
-                    self.eq_gain.write().unwrap()[4] = DEFAULT_CROSSOVER_GAIN;
-                    self.eq_gain.write().unwrap()[5] = DEFAULT_CROSSOVER_GAIN;
-                }
-                ui.radio_value(&mut *self.channels.write().unwrap(), AudioChannels::Mono, "Mono");
-                ui.radio_value(&mut *self.channels.write().unwrap(), AudioChannels::Stereo, "Stereo");
-            });
-            ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
-            {
-                ui.add(
-                    Slider::new(&mut *self.gain.write().unwrap().ptr(), 0.0..=VOLUME_SLIDER_MAX)
-                    .text("Gain")
-                    .orientation(SliderOrientation::Vertical)
-                    .step_by(0.01)
-                    .show_value(false)
-                    );
-                ui.add(
-                    Slider::new(&mut self.eq_gain.write().unwrap()[0], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
-                    .orientation(SliderOrientation::Vertical)
-                    .step_by(GAIN_SLIDER_INC)
-                    .logarithmic(true)
-                    .show_value(false)
-                    );
-                ui.add(
-                    Slider::new(&mut self.eq_gain.write().unwrap()[1], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
-                    .orientation(SliderOrientation::Vertical)
-                    .step_by(GAIN_SLIDER_INC)
-                    .logarithmic(true)
-                    .show_value(false)
-                    );
-                ui.add(
-                    Slider::new(&mut self.eq_gain.write().unwrap()[2], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
-                    .orientation(SliderOrientation::Vertical)
-                    .step_by(GAIN_SLIDER_INC)
-                    .logarithmic(true)
-                    .show_value(false)
-                    );
-                ui.add(
-                    Slider::new(&mut self.eq_gain.write().unwrap()[3], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
-                    .orientation(SliderOrientation::Vertical)
-                    .step_by(GAIN_SLIDER_INC)
-                    .logarithmic(true)
-                    .show_value(false)
-                    );
-                ui.add(
-                    Slider::new(&mut self.eq_gain.write().unwrap()[4], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
-                    .orientation(SliderOrientation::Vertical)
-                    .step_by(0.001)
-                    .step_by(GAIN_SLIDER_INC)
-                    .logarithmic(true)
-                    .show_value(false)
-                    );
-                ui.add(
-                    Slider::new(&mut self.eq_gain.write().unwrap()[5], GAIN_SLIDER_MIN..=GAIN_SLIDER_MAX)
-                    .orientation(SliderOrientation::Vertical)
-                    .step_by(GAIN_SLIDER_INC)
-                    .logarithmic(true)
-                    .show_value(false)
-                    );
-            });
-            ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
-            {
-                ui.label(format!("L-RMS: {}", self.rms.read().unwrap()[0].value()));
-                ui.label(format!("L-RMS: {}", self.rms.read().unwrap()[1].value()));
-            });
-        });
-    }
 }
 
