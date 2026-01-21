@@ -5,9 +5,7 @@ pub struct AGC{
 }
 
 impl AGC{
-    // FIXME: Change to exponential decay that resets upon slider change
-    // Logistic function
-    const DELTA_SCALE:f32 = 0.001;
+    const DELTA_SCALE:f32 = 0.0005;
     const _EXP_SCALE:f32 = 0.001;
     const GAIN_MAX:f32 = 5.0;
     pub fn new(set_point:f32) -> AGC

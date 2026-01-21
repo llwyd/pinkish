@@ -18,6 +18,7 @@ impl RMS{
         }
     }
 
+#[allow(dead_code)]    
     pub fn value(&self) -> f32
     {
         self.rms

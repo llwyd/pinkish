@@ -11,7 +11,7 @@ pub struct PinkishGUI {
     eq_gain:Arc<RwLock<Vec<f32>>>,
     pink_gain: [f32;6],
     channels: Arc<RwLock<AudioChannels>>,
-    rms: Arc<RwLock<[RMS;2]>>,
+    _rms: Arc<RwLock<[RMS;2]>>,
     agc: Arc<RwLock<[AGC;2]>>,
 }
 
@@ -29,7 +29,7 @@ impl PinkishGUI{
             eq_gain: eq_gain.clone(),
             pink_gain,
             channels,
-            rms: rms.clone(),
+            _rms: rms.clone(),
             agc: agc.clone(),
         }
     }
@@ -38,7 +38,6 @@ impl PinkishGUI{
 impl eframe::App for PinkishGUI{
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
         egui::CentralPanel::default().show(ctx, |ui|{
-            ui.heading("Pink-ish");
             ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
             {
                 if ui.button("Stop").clicked(){
@@ -123,11 +122,13 @@ impl eframe::App for PinkishGUI{
                     .show_value(false)
                     );
             });
+/*
             ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
             {
                 ui.label(format!("L-RMS: {}", self.rms.read().unwrap()[0].value()));
                 ui.label(format!("L-RMS: {}", self.rms.read().unwrap()[1].value()));
             });
+*/
         });
     }
 }
