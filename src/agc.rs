@@ -23,6 +23,10 @@ impl AGC{
     {
         self.gain
     }
+    pub fn reset(&mut self)
+    {
+        self.gain = 0.1;
+    }
 
     pub fn update(&mut self, rms:f32)
     {
@@ -35,5 +39,6 @@ impl AGC{
         {
             self.gain = Self::GAIN_MAX;
         }
+        assert!(self.gain > 0.0);
     }
 }

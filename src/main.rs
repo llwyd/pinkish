@@ -286,11 +286,12 @@ fn main() -> eframe::Result{
     let rms = Arc::new(RwLock::new([RMS::new(rms_freq, fs),RMS::new(rms_freq,fs)]));
     let audio_rms = rms.clone();
     let set_point = 0.1;
-    let mut agc = [
+    let agc = Arc::new(RwLock::new([
         AGC::new(set_point),
         AGC::new(set_point)
-    ];
-    
+    ]));
+   
+    let audio_agc = agc.clone();
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
@@ -310,13 +311,13 @@ fn main() -> eframe::Result{
                 let fout = lr_eq[idx].next(inp);
 
                 // Apply gain
-                let gout = fout * agc[idx].gain();
+                let gout = fout * audio_agc.read().unwrap()[idx].gain();
 
                 // Calculate RMS
                 rms_out[idx] = audio_rms.write().unwrap()[idx].next(gout);
               
                 // Update gain control
-                agc[idx].update(rms_out[idx]);
+                audio_agc.write().unwrap()[idx].update(rms_out[idx]);
 
                 let out = gout * master_gain;
                 if !(out <= 1.0) || !(out >= -1.0)
@@ -326,7 +327,7 @@ fn main() -> eframe::Result{
                     println!("gout: {:?}", gout );
                     println!(" out: {:?}", out );
                     println!(" rms: {:?}", rms_out[idx] );
-                    println!(" agc: {:?}", agc[idx].gain() );
+                    println!(" agc: {:?}", audio_agc.read().unwrap()[idx].gain() );
                     println!("gain: {:?}", master_gain );
                     panic!()
                 }
@@ -338,7 +339,7 @@ fn main() -> eframe::Result{
                     AudioChannels::Stereo => {*sample = stereo_out[idx]}
                 }
             }
-            println!("AGC: ({:?}, {:?})", agc[0].gain(), agc[1].gain());
+      //      println!("AGC: ({:?}, {:?})", agc[0].gain(), agc[1].gain());
             println!("RMS: ({:?}, {:?})", rms_out[0],rms_out[1]);
         }
     },
@@ -360,7 +361,8 @@ fn main() -> eframe::Result{
                             eq_gain.clone(),
                             filter_coeffs_48000::PINK_GAIN,
                             channels.clone(),
-                            rms.clone()
+                            rms.clone(),
+                            agc.clone()
                             )))
             }))
 }

@@ -2,6 +2,7 @@ use egui::{Align,Layout,Slider,SliderOrientation};
 use std::sync::{Arc, RwLock};
 use crate::gain::Gain;
 use crate::rms::RMS;
+use crate::agc::AGC;
 use crate::audio_config::*;
 use crate::audio_magic::*;
 
@@ -11,6 +12,7 @@ pub struct PinkishGUI {
     pink_gain: [f32;6],
     channels: Arc<RwLock<AudioChannels>>,
     rms: Arc<RwLock<[RMS;2]>>,
+    agc: Arc<RwLock<[AGC;2]>>,
 }
 
 impl PinkishGUI{
@@ -20,6 +22,7 @@ impl PinkishGUI{
         pink_gain: [f32;6],
         channels: Arc<RwLock<AudioChannels>>,
         rms: Arc<RwLock<[RMS;2]>>,
+        agc: Arc<RwLock<[AGC;2]>>,
         ) -> Self{
         Self{
             gain: gain.clone(),
@@ -27,6 +30,7 @@ impl PinkishGUI{
             pink_gain,
             channels,
             rms: rms.clone(),
+            agc: agc.clone(),
         }
     }
 }
@@ -53,6 +57,8 @@ impl eframe::App for PinkishGUI{
                 }
                 if ui.button("White").clicked(){
 
+                    self.agc.write().unwrap()[0].reset();
+                    self.agc.write().unwrap()[1].reset();
                     let white_gain = DEFAULT_CROSSOVER_GAIN;
                     self.eq_gain.write().unwrap()[0] = white_gain;
                     self.eq_gain.write().unwrap()[1] = white_gain;
