@@ -7,6 +7,7 @@ Noise generator with EQ.
 - ~~Radio buttons for stereo / mono~~
 - ~~RMS measurement~~
 - ~~Use RMS to scale measurement~~
-- SP-LPF for EQ adjustment
-    - prevent glitches from amplitude spikes, gradual eq change
+- ~~SP-LPF for EQ adjustment~~
+    - ~~prevent glitches from amplitude spikes, gradual eq change~~
+- Set gain to 0 when pressing buttons
 - Fix UI size
