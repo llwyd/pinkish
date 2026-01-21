@@ -28,7 +28,7 @@ z = np.zeros(sig_len)
 x[fs*5:fs*10] *= 0.1
 
 
-cutoff = 20
+cutoff = 100 # default = 1
 alpha = dsp.get_alpha(cutoff,fs)
 
 #rms = ewma(np.abs(x),alpha,sig_len)
@@ -36,29 +36,30 @@ rms = np.zeros(sig_len)
 rms[:] = 0.0
 
 g = np.zeros(sig_len)
-set_point = 0.3 * 0.707
-#set_point_rec = 1 / set_point
+set_point = 0.3
 
 # Gain needs to be reset upon slider transition
-gain = 0.01
+gain = 0.00001
 delta_scale = 0.001
+exp_scale = 0.0075 # default = 0.001
 for i in range(sig_len):
 
     z[i] = x[i]
     z[i] *= gain
-    rms[i] = np.abs(z[i]) - alpha*(np.abs(z[i]) - rms[i-1])
     
-    delta = set_point - rms[i]
+    delta = set_point - rms[i - 1]
     #gain = 1.0 + (delta * set_point_rec)
     #gain -= delta
    
-    gain *= 1.0 + (delta * delta_scale)
+    #gain *= 1.0 + (delta * delta_scale)
+    gain *= 1.0 - (1 - (np.e ** (exp_scale *delta)))
+    rms[i] = np.abs(z[i]) - alpha*(np.abs(z[i]) - rms[i-1])
     g[i] = gain
     #print(f'g: {gain}')
 
-post_rms = ewma(np.abs(z),alpha,sig_len)
 
+plt.plot(x)
 plt.plot(z)
 plt.plot(rms)
-plt.plot(post_rms)
+plt.plot(g)
 plt.show()

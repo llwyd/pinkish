@@ -11,7 +11,7 @@ pub struct Equaliser{
 }
 
 impl Equaliser{
-    const GAIN_CUTOFF:f32 = 0.5;
+    const GAIN_CUTOFF:f32 = 1.0;
     pub fn new(crossovers: Vec<Crossover>,
         band_gain:Arc<RwLock<Vec<f32>>>,
         fs: f32,

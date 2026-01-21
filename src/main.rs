@@ -338,10 +338,8 @@ fn main() -> eframe::Result{
                     AudioChannels::Stereo => {*sample = stereo_out[idx]}
                 }
             }
-            /*
             println!("AGC: ({:?}, {:?})", agc[0].gain(), agc[1].gain());
             println!("RMS: ({:?}, {:?})", rms_out[0],rms_out[1]);
-            */
         }
     },
     move |_err|
