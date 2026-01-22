@@ -1,3 +1,4 @@
+use crate::audio_magic::*;
 
 #[derive(Copy, Clone)]
 pub struct Gain{
@@ -6,10 +7,13 @@ pub struct Gain{
 }
 
 impl Gain{
+    const GAIN_INCREMENT:f32 = 0.01;
+    const GAIN_MAX:f32 = VOLUME_SLIDER_MAX; 
+    const GAIN_INIT:f32 = 0.0;
     pub fn new() -> Gain{
         Gain{
-            gain: 1.0,
-            prev: 1.0,
+            gain: Self::GAIN_INIT,
+            prev: Self::GAIN_INIT,
         }
     }
     pub fn value(&self) -> f32{
@@ -20,6 +24,25 @@ impl Gain{
         &mut self.gain
     }
 
+    pub fn increment(&mut self)
+    {
+        self.gain += Self::GAIN_INCREMENT;
+        if self.gain > Self::GAIN_MAX
+        {
+            self.gain = Self::GAIN_MAX;
+        }
+    }
+    
+    pub fn decrement(&mut self)
+    {
+        self.gain -= Self::GAIN_INCREMENT;
+        if self.gain < 0.0
+        {
+            self.gain = 0.0;
+        }
+    }
+
+#[allow(dead_code)]    
     pub fn silence(&mut self)
     {
         if self.gain > 0.0
@@ -28,6 +51,7 @@ impl Gain{
             self.gain = 0.0;
         }
     }
+#[allow(dead_code)]    
     pub fn resume(&mut self)
     {
         self.gain = self.prev;

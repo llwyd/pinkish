@@ -28,7 +28,6 @@ use crate::noise::Noise;
 use crate::biquad::Biquad;
 use crate::rms::RMS;
 use crate::audio_config::*;
-use crate::audio_magic::*;
 use crate::gui::*;
 
 fn load_filters() -> (CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads)
@@ -225,7 +224,10 @@ fn main() -> eframe::Result{
     let num_bands = 6;
     let options = eframe::NativeOptions
     {
-        viewport: egui::ViewportBuilder::default().with_inner_size([320.0, 240.0]),
+        viewport: egui::ViewportBuilder::default()
+            .with_inner_size([320.0, 240.0])
+            .with_resizable(false)
+            ,
         ..Default::default()
     };
     
@@ -244,9 +246,9 @@ fn main() -> eframe::Result{
 
     let band_gain: Arc<RwLock<Vec<f32>>> = Arc::new(RwLock::new(Vec::new()));
     
-    for _i in 0..num_bands
+    for i in 0..num_bands
     {
-        band_gain.write().unwrap().push(DEFAULT_CROSSOVER_GAIN);
+        band_gain.write().unwrap().push(filter_coeffs_48000::PINK_GAIN[i]);
     }
 
     let (co0, co1, co2, co3, co4) = load_filters();
@@ -279,7 +281,7 @@ fn main() -> eframe::Result{
     
     let master_gain = Arc::new(RwLock::new(Gain::new()));
     let gain = master_gain.clone();
-    *gain.write().unwrap().ptr() = 0.0;
+    *gain.write().unwrap().ptr() = 0.2;
     let chnls = channels.clone();
 
     let rms_freq = 1.0;
