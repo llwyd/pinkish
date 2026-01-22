@@ -322,7 +322,7 @@ fn main() -> eframe::Result{
                 audio_agc.write().unwrap()[idx].update(rms_out[idx]);
 
                 let out = gout * master_gain;
-                if !(out <= 1.0) || !(out >= -1.0)
+                if !(out.abs() <= 1.0)
                 {
                     println!(" inp: {:?}", inp );
                     println!("fout: {:?}", fout );
