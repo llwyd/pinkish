@@ -2,14 +2,4 @@
 
 Noise generator with EQ.
 
-# To do list
-
-- ~~Radio buttons for stereo / mono~~
-- ~~RMS measurement~~
-- ~~Use RMS to scale measurement~~
-- ~~SP-LPF for EQ adjustment~~
-    - ~~prevent glitches from amplitude spikes, gradual eq change~~
-~~- Set gain to 0 when pressing buttons~~
-~~- Fix UI size~~
-- Change model to f32 strict
-- Verify filter design
+[![Rust](https://github.com/llwyd/pinkish/actions/workflows/rust.yml/badge.svg)](https://github.com/llwyd/pinkish/actions/workflows/rust.yml)
