@@ -13,6 +13,7 @@ pub struct PinkishGUI {
     channels: Arc<RwLock<AudioChannels>>,
     _rms: Arc<RwLock<[RMS;2]>>,
     agc: Arc<RwLock<[AGC;2]>>,
+    fs: f32,
 }
 
 impl PinkishGUI{
@@ -23,6 +24,7 @@ impl PinkishGUI{
         channels: Arc<RwLock<AudioChannels>>,
         rms: Arc<RwLock<[RMS;2]>>,
         agc: Arc<RwLock<[AGC;2]>>,
+        fs: f32,
         ) -> Self{
         Self{
             gain: gain.clone(),
@@ -31,6 +33,7 @@ impl PinkishGUI{
             channels,
             _rms: rms.clone(),
             agc: agc.clone(),
+            fs,
         }
     }
 }
@@ -48,6 +51,8 @@ impl eframe::App for PinkishGUI{
             {
                 ui.hyperlink_to(format!("GitHub {}",special_emojis::GITHUB), "https://github.com/llwyd/pinkish");
                 ui.hyperlink_to(format!("llwyd.io"), "https://llwyd.io");
+                ui.label(format!("{} Hz", self.fs));
+                ui.label(format!("v{}",env!("CARGO_PKG_VERSION")));
             });
         
         });

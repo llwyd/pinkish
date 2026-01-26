@@ -140,7 +140,8 @@ fn playback(
                             filter_coeffs_48000::PINK_GAIN,
                             channels.clone(),
                             rms.clone(),
-                            agc.clone()
+                            agc.clone(),
+                            fs,
                             )))
             }))
 }
@@ -149,7 +150,6 @@ fn main() -> eframe::Result{
     let mut mode = OpMode::Playback;
 
     let matches = Command::new("Pinkish")
-        .version("0.1")
         .about("Noise generator with EQ")
         .arg(
             arg!( -v --verify <NUM_SECS> "Verify output, produce x seconds of data")
