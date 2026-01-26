@@ -15,211 +15,25 @@ mod biquad;
 mod crossover;
 mod eq;
 mod filter_coeffs_48000;
+mod filter_loader;
 mod gain;
 mod gui;
 mod noise;
 mod rms;
 mod single_pole_lpf;
+mod verify;
 
 use crate::agc::AGC;
 use crate::eq::Equaliser;
 use crate::crossover::*;
 use crate::gain::Gain;
 use crate::noise::Noise;
-use crate::biquad::Biquad;
 use crate::rms::RMS;
 use crate::audio_config::*;
 use crate::audio_magic::*;
 use crate::gui::*;
-
-fn load_filters() -> (CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads,CrossoverBiquads)
-{
-    let mut filter_0_bq = CrossoverBiquads{
-        lpf: Vec::new(),
-        hpf: Vec::new()
-    };
-    let mut filter_1_bq = CrossoverBiquads{
-        lpf: Vec::new(),
-        hpf: Vec::new()
-    };
-    let mut filter_2_bq = CrossoverBiquads{
-        lpf: Vec::new(),
-        hpf: Vec::new()
-    };
-    let mut filter_3_bq = CrossoverBiquads{
-        lpf: Vec::new(),
-        hpf: Vec::new()
-    };
-    let mut filter_4_bq = CrossoverBiquads{
-        lpf: Vec::new(),
-        hpf: Vec::new()
-    };
-    for i in 0..filter_coeffs_48000::FILTER_0_LPF.len()
-    {
-        filter_0_bq.lpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_0_LPF[i][0],
-                    filter_coeffs_48000::FILTER_0_LPF[i][1],
-                    filter_coeffs_48000::FILTER_0_LPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_0_LPF[i][4],
-                    filter_coeffs_48000::FILTER_0_LPF[i][5]
-                ])
-            );
-    }
-    for i in 0..filter_coeffs_48000::FILTER_0_HPF.len()
-    {
-        filter_0_bq.hpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_0_HPF[i][0],
-                    filter_coeffs_48000::FILTER_0_HPF[i][1],
-                    filter_coeffs_48000::FILTER_0_HPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_0_HPF[i][4],
-                    filter_coeffs_48000::FILTER_0_HPF[i][5]
-                ])
-            );
-    }
-    for i in 0..filter_coeffs_48000::FILTER_1_LPF.len()
-    {
-        filter_1_bq.lpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_1_LPF[i][0],
-                    filter_coeffs_48000::FILTER_1_LPF[i][1],
-                    filter_coeffs_48000::FILTER_1_LPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_1_LPF[i][4],
-                    filter_coeffs_48000::FILTER_1_LPF[i][5]
-                ])
-            );
-    }
-    for i in 0..filter_coeffs_48000::FILTER_1_HPF.len()
-    {
-        filter_1_bq.hpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_1_HPF[i][0],
-                    filter_coeffs_48000::FILTER_1_HPF[i][1],
-                    filter_coeffs_48000::FILTER_1_HPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_1_HPF[i][4],
-                    filter_coeffs_48000::FILTER_1_HPF[i][5]
-                ])
-            );
-    }
-    
-    /* Filter 2 */
-    for i in 0..filter_coeffs_48000::FILTER_2_LPF.len()
-    {
-        filter_2_bq.lpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_2_LPF[i][0],
-                    filter_coeffs_48000::FILTER_2_LPF[i][1],
-                    filter_coeffs_48000::FILTER_2_LPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_2_LPF[i][4],
-                    filter_coeffs_48000::FILTER_2_LPF[i][5]
-                ])
-            );
-    }
-    for i in 0..filter_coeffs_48000::FILTER_2_HPF.len()
-    {
-        filter_2_bq.hpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_2_HPF[i][0],
-                    filter_coeffs_48000::FILTER_2_HPF[i][1],
-                    filter_coeffs_48000::FILTER_2_HPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_2_HPF[i][4],
-                    filter_coeffs_48000::FILTER_2_HPF[i][5]
-                ])
-            );
-    }
-    
-    /* Filter 3 */
-    for i in 0..filter_coeffs_48000::FILTER_3_LPF.len()
-    {
-        filter_3_bq.lpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_3_LPF[i][0],
-                    filter_coeffs_48000::FILTER_3_LPF[i][1],
-                    filter_coeffs_48000::FILTER_3_LPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_3_LPF[i][4],
-                    filter_coeffs_48000::FILTER_3_LPF[i][5]
-                ])
-            );
-    }
-    for i in 0..filter_coeffs_48000::FILTER_3_HPF.len()
-    {
-        filter_3_bq.hpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_3_HPF[i][0],
-                    filter_coeffs_48000::FILTER_3_HPF[i][1],
-                    filter_coeffs_48000::FILTER_3_HPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_3_HPF[i][4],
-                    filter_coeffs_48000::FILTER_3_HPF[i][5]
-                ])
-            );
-    }
-
-    /* Filter 4 */
-    for i in 0..filter_coeffs_48000::FILTER_4_LPF.len()
-    {
-        filter_4_bq.lpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_4_LPF[i][0],
-                    filter_coeffs_48000::FILTER_4_LPF[i][1],
-                    filter_coeffs_48000::FILTER_4_LPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_4_LPF[i][4],
-                    filter_coeffs_48000::FILTER_4_LPF[i][5]
-                ])
-            );
-    }
-    for i in 0..filter_coeffs_48000::FILTER_4_HPF.len()
-    {
-        filter_4_bq.hpf.push(
-            Biquad::new(
-                [
-                    filter_coeffs_48000::FILTER_4_HPF[i][0],
-                    filter_coeffs_48000::FILTER_4_HPF[i][1],
-                    filter_coeffs_48000::FILTER_4_HPF[i][2]
-                ],
-                [
-                    filter_coeffs_48000::FILTER_4_HPF[i][4],
-                    filter_coeffs_48000::FILTER_4_HPF[i][5]
-                ])
-            );
-    }
-    
-
-    (
-    filter_0_bq.clone(),
-    filter_1_bq.clone(),
-    filter_2_bq.clone(),
-    filter_3_bq.clone(),
-    filter_4_bq.clone(),
-    )
-}
+use crate::verify::*;
+use crate::filter_loader::*;
 
 fn playback(
     mut stereo_noise:[Noise;2],
@@ -331,52 +145,6 @@ fn playback(
             }))
 }
 
-fn verify(
-    mut stereo_noise:[Noise;2],
-    mut eq: [Equaliser;2],
-    _m_gain: Arc<RwLock<Gain>>,
-    _rms: Arc<RwLock<[RMS;2]>>,
-    _agc: Arc<RwLock<[AGC;2]>>,
-    output_len:u16
-    ) -> eframe::Result{
-
-   
-    for _i in 0..(48000 * output_len){
-        let inp = stereo_noise[0].update();
-        let out = eq[0].next(inp);
-
-        println!("{:?}", out);
-    }
-    Result::Ok(())
-}
-
-fn verify_impulse(
-    mut _stereo_noise:[Noise;2],
-    mut eq: [Equaliser;2],
-    _m_gain: Arc<RwLock<Gain>>,
-    _rms: Arc<RwLock<[RMS;2]>>,
-    _agc: Arc<RwLock<[AGC;2]>>,
-    output_len:u16
-    ) -> eframe::Result{
-
-   
-    for i in 0..(48000 * output_len){
-        let inp;
-        if i == 0
-        {
-            inp = 1.0
-        }
-        else
-        {
-            inp = 0.0
-        }
-        let out = eq[0].next(inp);
-
-        println!("{:?}", out);
-    }
-    Result::Ok(())
-}
-
 fn main() -> eframe::Result{
     let mut mode = OpMode::Playback;
 
@@ -385,6 +153,9 @@ fn main() -> eframe::Result{
         .about("Noise generator with EQ")
         .arg(
             arg!( -v --verify <NUM_SECS> "Verify output, produce x seconds of data")
+            .value_parser(value_parser!(u16)))
+        .arg(
+            arg!( -a --all <NUM_SECS> "Verify output with AGC enabled, produce x seconds of data")
             .value_parser(value_parser!(u16)))
         .arg(
             arg!( -f --filter <NUM_SECS> "Verify filter, produce x seconds of IR data")
@@ -411,6 +182,16 @@ fn main() -> eframe::Result{
         },
         None => {}
     }
+    
+    match matches.get_one::<u16>("all")
+    {
+        Some(x) => 
+        { 
+            output_len = *x; 
+            mode = OpMode::VerifyAll;
+        },
+        None => {}
+    }
 
     let host = cpal::default_host();
     let device = host.default_output_device().expect("Host Device error");    
@@ -426,7 +207,7 @@ fn main() -> eframe::Result{
         band_gain.write().unwrap().push(filter_coeffs_48000::PINK_GAIN[i]);
     }
 
-    let (co0, co1, co2, co3, co4) = load_filters();
+    let (co0, co1, co2, co3, co4) = load_filters_48000();
     let lr_eq = [
         Equaliser::new(
                 vec![
@@ -483,6 +264,17 @@ fn main() -> eframe::Result{
         OpMode::Verify => 
         {
             result = verify(
+                stereo_noise,
+                lr_eq,
+                master_gain.clone(),
+                rms.clone(),
+                agc.clone(),
+                output_len,
+                ) 
+        },
+        OpMode::VerifyAll => 
+        {
+            result = verify_all(
                 stereo_noise,
                 lr_eq,
                 master_gain.clone(),

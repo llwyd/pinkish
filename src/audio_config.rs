@@ -10,6 +10,7 @@ pub enum OpMode
 {
     Playback,
     Verify,
+    VerifyAll,
     Filter,
 }
 
