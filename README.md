@@ -9,5 +9,7 @@ Noise generator with EQ.
 - ~~Use RMS to scale measurement~~
 - ~~SP-LPF for EQ adjustment~~
     - ~~prevent glitches from amplitude spikes, gradual eq change~~
-- Set gain to 0 when pressing buttons
-- Fix UI size
+~~- Set gain to 0 when pressing buttons~~
+~~- Fix UI size~~
+- Change model to f32 strict
+- Verify filter design

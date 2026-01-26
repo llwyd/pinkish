@@ -5,3 +5,11 @@ pub enum AudioChannels
     Stereo,
 }
 
+#[derive(Clone,Debug,PartialEq)]
+pub enum OpMode
+{
+    Playback,
+    Verify,
+    Filter,
+}
+

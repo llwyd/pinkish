@@ -28,9 +28,9 @@ impl Equaliser{
             num_bands,
         };
         
-        for _i in 0..num_bands
+        for i in 0..num_bands
         {
-            e.gain_filter.push(SinglePoleLPF::new(Self::GAIN_CUTOFF, fs));
+            e.gain_filter.push(SinglePoleLPF::new(Self::GAIN_CUTOFF, fs, e.g.read().unwrap()[i] ));
         }
 
         e

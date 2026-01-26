@@ -13,7 +13,7 @@ impl RMS{
     {
         RMS
         {
-            lpf: SinglePoleLPF::new(fc,fs),
+            lpf: SinglePoleLPF::new(fc,fs, 0.0),
             rms: 0.0,
         }
     }

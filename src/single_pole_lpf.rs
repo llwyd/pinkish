@@ -5,7 +5,7 @@ pub struct SinglePoleLPF{
 }
 
 impl SinglePoleLPF{
-    pub fn new(fc:f32, fs:f32) -> SinglePoleLPF
+    pub fn new(fc:f32, fs:f32, init:f32) -> SinglePoleLPF
     {
         assert!(fs > 0.0);
         assert!(fc > 0.0);
@@ -15,7 +15,7 @@ impl SinglePoleLPF{
         SinglePoleLPF
         {
             alpha: exp.exp(),
-            y: 0.0,
+            y: init,
         }
     }
 

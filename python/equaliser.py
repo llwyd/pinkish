@@ -33,7 +33,7 @@ fs = 48000
 sig_len = fs 
 order = 1
 axcolor = 'lightgoldenrodyellow'
-fig, ax = plt.subplots(figsize=(8,6))
+fig, ax = plt.subplots(figsize=(9.6,8))
 
 plt.title("Pinkish Filter Design Tool")
 plt.subplots_adjust(bottom=0.35)
