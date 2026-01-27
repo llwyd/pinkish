@@ -1,4 +1,4 @@
-name: Rust
+name: CICD
 
 on:
   push:
