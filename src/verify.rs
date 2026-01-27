@@ -1,5 +1,6 @@
 use std::sync::{Arc, RwLock};
 use crate::agc::AGC;
+use crate::clip::Clipper;
 use crate::eq::Equaliser;
 use crate::gain::Gain;
 use crate::noise::Noise;
@@ -34,7 +35,7 @@ pub fn verify_all(
     output_len:u16
     ) -> eframe::Result{
 
-  
+    let clipper = Clipper::new(1.0);
     let out_len = output_len as u32;
     let mut rms_out;
     for _i in 0..(48000 * out_len){
@@ -43,7 +44,8 @@ pub fn verify_all(
         let gout = fout * agc.read().unwrap()[0].gain();
         rms_out = rms.write().unwrap()[0].next(gout);
         agc.write().unwrap()[0].update(rms_out);
-        let out = gout * m_gain.read().unwrap().value();
+        let vout = gout * m_gain.read().unwrap().value();
+        let out = clipper.next(vout);
 
         println!("{:?}", out);
     }

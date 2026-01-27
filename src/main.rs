@@ -12,6 +12,7 @@ mod agc;
 mod audio_config;
 mod audio_magic;
 mod biquad;
+mod clip;
 mod crossover;
 mod eq;
 mod filter_coeffs_48000;
@@ -25,6 +26,7 @@ mod verify;
 
 use crate::agc::AGC;
 use crate::eq::Equaliser;
+use crate::clip::Clipper;
 use crate::crossover::*;
 use crate::gain::Gain;
 use crate::noise::Noise;
@@ -71,7 +73,8 @@ fn playback(
     let audio_agc = agc.clone();
     let audio_rms = rms.clone();
     let master_gain = m_gain.clone();
-
+    let clipper = Clipper::new(1.0);
+    
     let stream = device.build_output_stream(&config.into(),
     move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
     {
@@ -99,7 +102,9 @@ fn playback(
                 // Update gain control
                 audio_agc.write().unwrap()[idx].update(rms_out[idx]);
 
-                let out = gout * gain;
+                let vout = gout * gain;
+                
+                let out = clipper.next(vout);
                 if !(out.abs() <= 1.0)
                 {
                     println!(" inp: {:?}", inp );

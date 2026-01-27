@@ -1,7 +1,10 @@
+use crate::clip::Clipper;
+
 #[derive(Clone,Debug)]
 pub struct AGC{
     set_point:f32,
     gain:f32,
+    clipper:Clipper,
 }
 
 impl AGC{
@@ -14,6 +17,7 @@ impl AGC{
         {
             set_point,
             gain: 0.1,
+            clipper:Clipper::new(Self::GAIN_MAX),
         }
     }
 
@@ -28,15 +32,10 @@ impl AGC{
 
     pub fn update(&mut self, rms:f32)
     {
-        //let delta = (self.set_point - rms)* Self::EXP_SCALE; 
-        //self.gain *= 1.0 - (1.0 - delta.exp());
-        //
         let delta = self.set_point - rms;
         self.gain *= 1.0 + (delta * Self::DELTA_SCALE);
-        if self.gain > Self::GAIN_MAX
-        {
-            self.gain = Self::GAIN_MAX;
-        }
+        self.gain = self.clipper.next(self.gain);
+        
         assert!(self.gain > 0.0);
     }
 }
