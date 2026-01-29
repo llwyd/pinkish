@@ -15,6 +15,10 @@ mod biquad;
 mod clip;
 mod crossover;
 mod eq;
+mod filter_coeffs_8000;
+mod filter_coeffs_16000;
+mod filter_coeffs_32000;
+mod filter_coeffs_44100;
 mod filter_coeffs_48000;
 mod filter_loader;
 mod gain;
@@ -43,6 +47,7 @@ fn playback(
     m_gain: Arc<RwLock<Gain>>,
     rms: Arc<RwLock<[RMS;2]>>,
     agc: Arc<RwLock<[AGC;2]>>,
+    pink_gains: [f32;6],
     ) -> eframe::Result
 {
     let options = eframe::NativeOptions
@@ -142,7 +147,7 @@ fn playback(
                 Ok(Box::new(PinkishGUI::new(cc, 
                             m_gain.clone(),
                             eq_gain.clone(),
-                            filter_coeffs_48000::PINK_GAIN,
+                            pink_gains,
                             channels.clone(),
                             rms.clone(),
                             agc.clone(),
@@ -207,12 +212,27 @@ fn main() -> eframe::Result{
     let stereo_noise = [Noise::new(),Noise::new()]; 
     let band_gain: Arc<RwLock<Vec<f32>>> = Arc::new(RwLock::new(Vec::new()));
     
+
+    let (co0, co1, co2, co3, co4, pink_gains);
+    match fs as u32
+    {
+        48000 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_48000()},
+        44100 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_44100()},
+        32000 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_32000()},
+        16000 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_16000()},
+         8000 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_8000()},
+        _ => 
+        {
+            println!("Sample rate not supported! :(");
+            panic!()
+        }
+    };
+    
     for i in 0..NUM_BANDS
     {
-        band_gain.write().unwrap().push(filter_coeffs_48000::PINK_GAIN[i]);
+        band_gain.write().unwrap().push(pink_gains[i]);
     }
 
-    let (co0, co1, co2, co3, co4) = load_filters_48000();
     let lr_eq = [
         Equaliser::new(
                 vec![
@@ -264,6 +284,7 @@ fn main() -> eframe::Result{
                 master_gain.clone(),
                 rms.clone(),
                 agc.clone(),
+                pink_gains,
                 )
         },
         OpMode::Verify => 

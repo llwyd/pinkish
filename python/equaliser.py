@@ -9,13 +9,22 @@ from tqdm import tqdm
 import random as r
 
 class CrossoverFilter():
+    def set_fs(self,new_fs):
+        self.fs = new_fs
+        
+    def set_cutoff(self,new_cutoff):
+        self.cutoff = new_cutoff
+    def regenerate(self):
+        self.lpf = signal.butter(self.order,self.cutoff,'lowpass',fs=self.fs,output='sos')
+        self.hpf = signal.butter(self.order,self.cutoff,'highpass',fs=self.fs,output='sos')
+
     def __init__(self,cutoff, fs, order):
         self.cutoff = cutoff
         self.order = order
         self.fs = fs
         
-        self.lpf = signal.butter(self.order,cutoff,'lowpass',fs=fs,output='sos')
-        self.hpf = signal.butter(self.order,cutoff,'highpass',fs=fs,output='sos')
+        self.lpf = signal.butter(self.order,self.cutoff,'lowpass',fs=self.fs,output='sos')
+        self.hpf = signal.butter(self.order,self.cutoff,'highpass',fs=self.fs,output='sos')
        
 def calculate_bands(filters, start,fs):
     step = (np.log(fs/2) - np.log(start))/ (filters + 1)
@@ -28,7 +37,8 @@ def calculate_bands(filters, start,fs):
     return cutoff
 
 num_bands = 6
-gain = np.zeros(num_bands)
+#gain = np.zeros(num_bands)
+gain = np.array(dsp.db_gain([1.00000000,0.28183829,0.16032454,0.07852356,0.04841724,0.03427678]))
 fs = 48000
 sig_len = fs 
 order = 1
@@ -44,8 +54,6 @@ ax.grid(which='both')
 plt.xlabel('Frequency (Hz)')
 plt.ylabel('Magnitude (dB)')
 
-def generate(event):
-    print("Generating filtered noise...")
 
 def export_filters(event):
 
@@ -56,7 +64,8 @@ def export_filters(event):
     white_gains = np.array2string(ex_gains,separator=',',floatmode='fixed')
     pink_gains = np.array2string(ex_gains,separator=',',floatmode='fixed')
 
-    f = open ('../src/filter_coeffs_48000.rs','w',encoding="utf-8")
+    
+    f = open (f'../src/filter_coeffs_{fs}.rs','w',encoding="utf-8")
 
     pink_string = f"pub const PINK_GAIN: [f32;6] = {pink_gains};"
     
@@ -84,9 +93,8 @@ ideal_db, ideal_f = dsp.generate_decade_line( 13, 100000 )
 ax.semilogx(ideal_f, ideal_db )
 
 
-axbutton = fig.add_axes([0.75, 0.1, 0.13, 0.075])
-genbutton = Button(axbutton,'Generate WAV')
-genbutton.on_clicked(generate)
+axradio = fig.add_axes([0.75, 0.1, 0.13, 0.175])
+radiobutton = RadioButtons(axradio,('8000','16000','32000','44100','48000'),active=4)
 
 exbutton = fig.add_axes([0.60, 0.1, 0.1, 0.075])
 exportbutton = Button(exbutton,'Export')
@@ -103,7 +111,7 @@ freqs = dsp.calculate_bands(num_bands,10,fs)
 eq_bands = []
 init_gain = 0.0
 for i in range(0,num_bands):
-    eq_bands.append(dsp.EQButterBand(freqs[i],freqs[i+1],fs,order, init_gain))
+    eq_bands.append(None)
 
 h = signal.unit_impulse(sig_len)
 H, Hf, Hdb = dsp.fft(h, fs, sig_len)    
@@ -153,6 +161,32 @@ def update_graph(val):
     hr_slope = dsp.get_fslope( Yf[l_hr:u_hr], Ydb[l_hr:u_hr] )
     hearing_range_text.set_text(f'HR gradient: {hr_slope:.6f}')
 
+def switch_fs(event):
+    new_fs = int(event) 
+    global fs
+    fs = new_fs
+    new_freqs = calculate_bands(num_crossovers,10,new_fs)
+    print(f'{new_freqs}')
+    for i,eq in enumerate(lr_filters):
+        eq.set_cutoff(new_freqs[i])
+        eq.set_fs(new_fs)
+        eq.regenerate()
+    for i, sl in enumerate(slider):
+        sl.set_val(gain[i])
+    #for i,g in enumerate(gain):
+    #    slider[i].set_val(0.0)
+    y = update()
+    Y,Yf,Ydb = dsp.fft(y,fs,sig_len)
+    
+    ly.set_ydata(Ydb)
+    ly.set_xdata(Yf)
+    hearing_range = [20, 20000]
+    l_hr = int((hearing_range[0] / (fs / 2)) * len(Yf))
+    u_hr = int((hearing_range[1] / (fs / 2)) * len(Yf))
+
+    hr_slope = dsp.get_fslope( Yf[l_hr:u_hr], Ydb[l_hr:u_hr] )
+    hearing_range_text.set_text(f'HR gradient: {hr_slope:.6f}')
+
 lr_sum = np.zeros(sig_len);
 
 high = signal.unit_impulse(sig_len)
@@ -182,11 +216,12 @@ lr_sum += high
 y = lr_sum
 for i in range(0, num_bands):
     axfreq.append(plt.axes([x_pos, y_pos, 0.03, 0.21], facecolor=axcolor))
-    slider.append(Slider(axfreq[i], f'{i}', -100, 10, valinit=0.0, valstep=0.1, orientation='vertical'))
+    slider.append(Slider(axfreq[i], f'{i}', -100, 10, valinit=gain[i], valstep=0.1, orientation='vertical'))
     slider[i].on_changed(update_graph)
     x_pos += x_inc
     y_pos += y_inc
 
+radiobutton.on_clicked(switch_fs)
 Y, Yf,Ydb = dsp.fft(y, fs, sig_len)    
 ly.set_ydata(Ydb)
 
