@@ -2,9 +2,22 @@ import numpy as np
 import matplotlib.pyplot as plt
 import dsp
 
+def generate_white_line(start_mag, end_freq):
+    iterations = int(np.log10( end_freq ) )
+    iterations += 1
+
+    mags = np.zeros(iterations)
+    freqs = np.zeros(iterations)
+
+    for i in range( iterations ):
+        mags[i] = start_mag
+        freqs[i] = ( 10 ** i )
+
+    return mags, freqs
+
 fs = 48000
 num_samples = fs
-x = np.loadtxt('../pink.txt')
+x = np.loadtxt('../white.txt')
 
 split_num = np.int32(len(x) / fs)
 
@@ -21,14 +34,14 @@ for z in y:
 Avgdb = Ydb/split_num
 
 
-ideal_db, ideal_f = dsp.generate_decade_line( 19, 100000 )
+ideal_db, ideal_f = generate_white_line( -7.32, 100000 )
 
 plt.semilogx(Zf,Avgdb)
 plt.semilogx(ideal_f, ideal_db)
-plt.title("Verify EQ Pink noise config")
+plt.title("Verify EQ White noise config")
 plt.xlabel("Frequency (Hz)");
 plt.ylabel("Magnitude (dB)");
-plt.legend(["Average of 1000 runs","ideal 1/f"])
+plt.legend(["Average of 1000 runs","ideal white"])
 plt.xlim(1,24000)
 plt.ylim(-25,10)
 plt.show()

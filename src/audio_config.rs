@@ -12,5 +12,6 @@ pub enum OpMode
     Verify,
     VerifyAll,
     Filter,
+    VerifyWhite,
 }
 

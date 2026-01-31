@@ -1,10 +1,12 @@
 use std::sync::{Arc, RwLock};
 use crate::agc::AGC;
+use crate::audio_magic;
 use crate::clip::Clipper;
 use crate::eq::Equaliser;
 use crate::gain::Gain;
 use crate::noise::Noise;
 use crate::rms::RMS;
+
 
 pub fn verify(
     mut stereo_noise:[Noise;2],
@@ -15,6 +17,34 @@ pub fn verify(
     output_len:u16
     ) -> eframe::Result{
 
+   
+    let out_len = output_len as u32;
+    for _i in 0..(48000 * out_len){
+        let inp = stereo_noise[0].update();
+        let out = eq[0].next(inp);
+
+        println!("{:?}", out);
+    }
+    Result::Ok(())
+}
+
+pub fn verify_white(
+    mut stereo_noise:[Noise;2],
+    mut eq: [Equaliser;2],
+    _m_gain: Arc<RwLock<Gain>>,
+    _rms: Arc<RwLock<[RMS;2]>>,
+    _agc: Arc<RwLock<[AGC;2]>>,
+    output_len:u16
+    ) -> eframe::Result{
+    
+    let g = eq[0].gain();
+
+    g.write().unwrap()[0] = audio_magic::DEFAULT_CROSSOVER_GAIN;
+    g.write().unwrap()[1] = audio_magic::DEFAULT_CROSSOVER_GAIN;
+    g.write().unwrap()[2] = audio_magic::DEFAULT_CROSSOVER_GAIN;
+    g.write().unwrap()[3] = audio_magic::DEFAULT_CROSSOVER_GAIN;
+    g.write().unwrap()[4] = audio_magic::DEFAULT_CROSSOVER_GAIN;
+    g.write().unwrap()[5] = audio_magic::DEFAULT_CROSSOVER_GAIN;
    
     let out_len = output_len as u32;
     for _i in 0..(48000 * out_len){

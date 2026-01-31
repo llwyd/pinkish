@@ -8,7 +8,7 @@ Makefile
 cmake_install.cmake
 .gdb_history
 pink.txt
-
+white.txt
 
 # Added by cargo
 

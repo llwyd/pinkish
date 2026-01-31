@@ -162,7 +162,10 @@ fn main() -> eframe::Result{
     let matches = Command::new("Pinkish")
         .about("Noise generator with EQ")
         .arg(
-            arg!( -v --verify <NUM_SECS> "Verify output, produce x seconds of data")
+            arg!( -p --pink <NUM_SECS> "Verify output, produce x seconds of data")
+            .value_parser(value_parser!(u16)))
+        .arg(
+            arg!( -w --white <NUM_SECS> "Verify output, produce x seconds of data")
             .value_parser(value_parser!(u16)))
         .arg(
             arg!( -a --all <NUM_SECS> "Verify output with AGC enabled, produce x seconds of data")
@@ -173,7 +176,7 @@ fn main() -> eframe::Result{
         .get_matches();
       
     let mut output_len:u16 = 0;
-    match matches.get_one::<u16>("verify")
+    match matches.get_one::<u16>("pink")
     {
         Some(x) => 
         { 
@@ -199,6 +202,16 @@ fn main() -> eframe::Result{
         { 
             output_len = *x; 
             mode = OpMode::VerifyAll;
+        },
+        None => {}
+    }
+    
+    match matches.get_one::<u16>("white")
+    {
+        Some(x) => 
+        { 
+            output_len = *x; 
+            mode = OpMode::VerifyWhite;
         },
         None => {}
     }
@@ -301,6 +314,17 @@ fn main() -> eframe::Result{
         OpMode::VerifyAll => 
         {
             result = verify_all(
+                stereo_noise,
+                lr_eq,
+                master_gain.clone(),
+                rms.clone(),
+                agc.clone(),
+                output_len,
+                ) 
+        },
+        OpMode::VerifyWhite => 
+        {
+            result = verify_white(
                 stereo_noise,
                 lr_eq,
                 master_gain.clone(),
