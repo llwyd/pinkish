@@ -20,6 +20,7 @@ mod filter_coeffs_16000;
 mod filter_coeffs_32000;
 mod filter_coeffs_44100;
 mod filter_coeffs_48000;
+mod filter_coeffs_96000;
 mod filter_loader;
 mod gain;
 mod gui;
@@ -229,6 +230,7 @@ fn main() -> eframe::Result{
     let (co0, co1, co2, co3, co4, pink_gains);
     match fs as u32
     {
+        96000 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_96000()},
         48000 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_48000()},
         44100 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_44100()},
         32000 => {(co0, co1, co2, co3, co4, pink_gains) = load_filters_32000()},

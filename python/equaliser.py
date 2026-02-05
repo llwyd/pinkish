@@ -94,7 +94,7 @@ ax.semilogx(ideal_f, ideal_db )
 
 
 axradio = fig.add_axes([0.75, 0.1, 0.13, 0.175])
-radiobutton = RadioButtons(axradio,('8000','16000','32000','44100','48000'),active=4)
+radiobutton = RadioButtons(axradio,('8000','16000','32000','44100','48000','96000'),active=4)
 
 exbutton = fig.add_axes([0.60, 0.1, 0.1, 0.075])
 exportbutton = Button(exbutton,'Export')
