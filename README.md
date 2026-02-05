@@ -13,3 +13,4 @@ Real-time Noise generator with EQ.
 - 32kHz
 - 44.1kHz
 - 48kHz
+- 96kHz
