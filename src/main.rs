@@ -42,6 +42,7 @@ use crate::gui::*;
 use crate::verify::*;
 use crate::filter_loader::*;
 
+#[cfg(not(target_arch = "wasm32"))]
 fn playback(
     mut stereo_noise:[Noise;2],
     mut eq: [Equaliser;2],
@@ -157,6 +158,7 @@ fn playback(
             }))
 }
 
+#[cfg(not(target_arch = "wasm32"))]
 fn main() -> eframe::Result{
     let mut mode = OpMode::Playback;
 
@@ -348,5 +350,38 @@ fn main() -> eframe::Result{
         },
     };
     result
+}
+
+#[cfg(target_arch = "wasm32")]
+fn main()
+{
+    use eframe::wasm_bindgen::JsCast as _;
+    eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+
+    wasm_bindgen_futures::spawn_local(async {
+        let document = web_sys::window()
+            .expect("No window")
+            .document()
+            .expect("No document");
+
+    let web_options = eframe::WebOptions::default();
+    
+    let canvas = document
+        .get_element_by_id("the_canvas_id")
+        .expect("Failed to find the_canvas_id")
+        .dyn_into::<web_sys::HtmlCanvasElement>()
+        .expect("the_canvas_id was not a HtmlCanvasElement");
+
+    let start_result = eframe::WebRunner::new()
+        .start(
+            canvas,
+            web_options,
+        Box::new(
+            |cc|{
+                Ok(Box::new(PinkishWeb::new(cc)))
+            }),
+        )
+        .await;
+        });
 }
 

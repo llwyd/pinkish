@@ -160,3 +160,31 @@ impl eframe::App for PinkishGUI{
         });
     }
 }
+
+pub struct PinkishWeb
+{
+    fs: f32
+}
+
+impl PinkishWeb
+{
+    pub fn new(_cc: &eframe::CreationContext<'_>) -> Self
+    {
+        Self
+        {
+            fs: 48000.0,
+        }
+    }
+}
+
+impl eframe::App for PinkishWeb{
+    fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
+        egui::TopBottomPanel::top("").show(ctx, |ui|{
+            ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
+            {
+                ui.label("Noise generator with 6 band graphic EQ");
+            });
+        });
+
+    }
+}

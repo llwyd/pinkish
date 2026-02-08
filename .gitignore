@@ -13,3 +13,4 @@ white.txt
 # Added by cargo
 
 /target
+/dist
