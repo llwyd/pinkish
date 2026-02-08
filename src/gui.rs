@@ -179,7 +179,7 @@ impl PinkishWeb
 
 impl eframe::App for PinkishWeb{
     fn update(&mut self, ctx: &egui::Context, _frame: &mut eframe::Frame){
-        egui::TopBottomPanel::top("").show(ctx, |ui|{
+        egui::CentralPanel::default().show(ctx, |ui|{
             ui.with_layout(Layout::left_to_right(Align::TOP), |ui|
             {
                 ui.label("Noise generator with 6 band graphic EQ");
