@@ -357,7 +357,38 @@ fn main()
 {
     use eframe::wasm_bindgen::JsCast as _;
     eframe::WebLogger::init(log::LevelFilter::Debug).ok();
+ 
+    /*
+    let host = cpal::default_host();
+    let device = host.default_output_device().expect("Host Device error");    
+    let config = device.default_output_config().unwrap();
+    
+    let mut stereo_noise = [Noise::new(),Noise::new()]; 
+    let num_channels = config.channels() as usize;
+    let stream = device.build_output_stream(&config.into(),
+    move |data: &mut [f32], _: &cpal::OutputCallbackInfo|
+    {
+        for frame in data.chunks_mut(num_channels)
+        {
 
+            for (idx,sample) in frame.iter_mut().enumerate()
+            {
+                // Generate white noise
+                let inp = stereo_noise[idx].update();
+                
+                *sample = inp * 0.2;
+            }
+        }
+    },
+    move |_err|
+    {
+    }, 
+    None).unwrap();
+
+
+    stream.play().unwrap();
+*/
+    
     wasm_bindgen_futures::spawn_local(async {
         let document = web_sys::window()
             .expect("No window")
