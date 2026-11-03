@@ -16,11 +16,12 @@ class PID():
 
         self.integral = 0.0
         self.previous_error = 0.0
+        self.dt = 1 / 48000
 
     def next(self, set_point, x):
         error = set_point - x
-        self.integral += error
-        delta = error - self.previous_error
+        self.integral += error * self.dt
+        delta = (error - self.previous_error) / self.dt
 
         if self.integral > 1.0:
             self.integral = 1.0
@@ -38,7 +39,7 @@ class PID():
 
 
 fs = 48000
-sig_len = 1024 * 4
+sig_len = fs * 4
 f = 100
 
 t = np.linspace(0,sig_len,sig_len)
@@ -48,11 +49,11 @@ z = np.zeros(sig_len)
 cutoff = 1.0
 alpha = dsp.get_alpha(cutoff,fs)
 
-pid = PID(1.0,0.001,0.1)
+pid = PID(0.0109,0.001,0.0001)
 
 
 gain = 1.0
-set_point = 0.3
+set_point = 0.0015 * 0.5
 y = np.zeros(sig_len)
 rms_plot = np.zeros(sig_len) 
 gain_plot = np.zeros(sig_len) 
@@ -64,8 +65,15 @@ for i in range(sig_len):
     x[i] *= gain
     rms = x[i] - alpha*(x[i] - rms)
     rms_plot[i] = rms
-    gain = pid.next(set_point, rms)
+    out = pid.next(set_point, rms)
+    
+    gain += out
+
     y[i] = x[i]
+
+
+print(f'avg gain {np.average(gain_plot)}')
+print(f'avg rms {np.average(rms_plot)} ({set_point})')
 
 plt.plot(z)
 plt.plot(y)
