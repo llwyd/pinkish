@@ -50,7 +50,7 @@ z = np.zeros(sig_len)
 cutoff = 1.0
 alpha = dsp.get_alpha(cutoff,fs)
 
-pid = PID(0.0109,0.001,0.0001)
+pid = PID(0.0075,0.001,0.0001)
 
 
 gain = 1.0
