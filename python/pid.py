@@ -16,17 +16,18 @@ class PID():
 
         self.integral = 0.0
         self.previous_error = 0.0
-        self.dt = 1 / 48000
+
+        self.integral_max = 0.01
 
     def next(self, set_point, x):
         error = set_point - x
-        self.integral += error * self.dt
-        delta = (error - self.previous_error) / self.dt
+        self.integral += error
+        delta = (error - self.previous_error)
 
-        if self.integral > 1.0:
-            self.integral = 1.0
-        elif self.integral < 0:
-            self.integral = 0
+        if self.integral > self.integral_max:
+            self.integral = self.integral_max
+        elif self.integral < -self.integral_max:
+            self.integral = -self.integral_max
         
         p = error * self.p_gain
         i = self.integral * self.i_gain
@@ -57,6 +58,7 @@ set_point = 0.0015 * 0.5
 y = np.zeros(sig_len)
 rms_plot = np.zeros(sig_len) 
 gain_plot = np.zeros(sig_len) 
+out_plot = np.zeros(sig_len) 
 rms = 0.0
 
 for i in range(sig_len):
@@ -68,16 +70,18 @@ for i in range(sig_len):
     out = pid.next(set_point, rms)
     
     gain += out
-
+    out_plot[i] = out
     y[i] = x[i]
 
 
+print(f'avg  err {np.average(out_plot)}')
 print(f'avg gain {np.average(gain_plot)}')
-print(f'avg rms {np.average(rms_plot)} ({set_point})')
+print(f'avg  rms {np.average(rms_plot)} ({set_point})')
 
 plt.plot(z)
 plt.plot(y)
 plt.plot(rms_plot)
 plt.plot(gain_plot)
-plt.legend(['original','output','rms','gain'])
+plt.plot(out_plot)
+plt.legend(['original','output','rms','gain','out'])
 plt.show()
