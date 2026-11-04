@@ -41,7 +41,7 @@ class PID():
 
 fs = 48000
 sig_len = fs * 4
-f = 10000
+f = 1000
 
 t = np.linspace(0,sig_len,sig_len)
 x = np.sin(2 * np.pi * f * (t/fs))
@@ -68,11 +68,11 @@ print(f'Exp RMS (1.00) {rms_100}')
 print(f'Exp RMS (0.50) {rms_050}')
 print(f'Exp RMS (0.25) {rms_025}')
 
-pid = PID(0.0075,0.001,0.0001)
+pid = PID(0.00004,0.00,100)
 
 
 gain = 1.0
-set_point = 0.0015 * 0.5
+set_point = 0.125 **2
 y = np.zeros(sig_len)
 rms_plot = np.zeros(sig_len) 
 gain_plot = np.zeros(sig_len) 
@@ -83,7 +83,7 @@ for i in range(sig_len):
     gain_plot[i] = gain
     z[i] = x[i]
     x[i] *= gain
-    rms = x[i] - alpha*(x[i] - rms)
+    rms = x[i]**2 - alpha*(x[i]**2 - rms)
     rms_plot[i] = rms
     out = pid.next(set_point, rms)
     
