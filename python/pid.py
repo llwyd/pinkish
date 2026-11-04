@@ -41,7 +41,7 @@ class PID():
 
 fs = 48000
 sig_len = fs * 4
-f = 100
+f = 10000
 
 t = np.linspace(0,sig_len,sig_len)
 x = np.sin(2 * np.pi * f * (t/fs))
@@ -49,6 +49,24 @@ z = np.zeros(sig_len)
 
 cutoff = 1.0
 alpha = dsp.get_alpha(cutoff,fs)
+
+x_100 = x**2 * 1.0
+x_050 = x**2 * 0.5
+x_025 = x**2 * 0.25
+
+rms_100 = 0.0
+rms_050 = 0.0
+rms_025 = 0.0
+
+for i in range(sig_len):
+    rms_100 = x_100[i] - alpha*(x_100[i] - rms_100)
+    rms_050 = x_050[i] - alpha*(x_050[i] - rms_050)
+    rms_025 = x_025[i] - alpha*(x_025[i] - rms_025)
+
+
+print(f'Exp RMS (1.00) {rms_100}')
+print(f'Exp RMS (0.50) {rms_050}')
+print(f'Exp RMS (0.25) {rms_025}')
 
 pid = PID(0.0075,0.001,0.0001)
 
