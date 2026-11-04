@@ -64,15 +64,17 @@ for i in range(sig_len):
     rms_025 = x_025[i] - alpha*(x_025[i] - rms_025)
 
 
+x[48000:96000] *= 0.1
+
 print(f'Exp RMS (1.00) {rms_100}')
 print(f'Exp RMS (0.50) {rms_050}')
 print(f'Exp RMS (0.25) {rms_025}')
 
-pid = PID(0.00004,0.00,100)
+pid = PID(0.08,0.001,150)
 
 
 gain = 1.0
-set_point = 0.125 **2
+set_point = 0.25**2
 y = np.zeros(sig_len)
 rms_plot = np.zeros(sig_len) 
 gain_plot = np.zeros(sig_len) 
