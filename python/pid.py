@@ -17,7 +17,7 @@ class PID():
         self.integral = 0.0
         self.previous_error = 0.0
 
-        self.integral_max = 0.01
+        self.integral_max = 0.02
 
     def next(self, set_point, x):
         error = set_point - x
@@ -70,10 +70,10 @@ print(f'Exp RMS (1.00) {rms_100}')
 print(f'Exp RMS (0.50) {rms_050}')
 print(f'Exp RMS (0.25) {rms_025}')
 
-pid = PID(0.08,0.001,150)
+pid = PID(0.12,0.00002,250)
 
 
-gain = 1.0
+gain = 0.5
 set_point = 0.25**2
 y = np.zeros(sig_len)
 rms_plot = np.zeros(sig_len) 
